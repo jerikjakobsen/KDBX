@@ -1,0 +1,32 @@
+{
+  "pins" : [
+    {
+      "identity" : "argon2swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tmthecoder/Argon2Swift.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "53543623fefe68461b7eeea03d7f96677c2fd76d"
+      }
+    },
+    {
+      "identity" : "gzipswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/1024jp/GzipSwift",
+      "state" : {
+        "revision" : "99cf703b461916279cbbb50068e904df86c37133",
+        "version" : "6.0.0"
+      }
+    },
+    {
+      "identity" : "phc-winner-argon2",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/P-H-C/phc-winner-argon2.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "f57e61e19229e23c4445b85494dbf7c07de721cb"
+      }
+    }
+  ],
+  "version" : 2
+}
