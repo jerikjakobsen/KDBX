@@ -56,15 +56,32 @@
  
  */
 
+import Foundation
+
+@available(iOS 13.0, *)
+@available(macOS 10.15, *)
+@available(macOS 13.0, *)
 class KDBXManager {
     
-//    let header: KDBXHeader
-//    let stream: InputStream?
-//
-//    init(password: String, fileURL: URL) throws {
-//
-//        self.stream = try InputStream(url: fileURL)
-//
-//        self.header = try KDBXHeader(stream: self.stream, userPassword: password)
-//    }
+    let header: KDBXHeader
+    let stream: InputStream?
+    let body: KDBXBody
+
+    init(password: String, stream: InputStream) throws {
+
+        self.stream = stream
+        self.header = try KDBXHeader(stream: stream)
+        self.body = try KDBXBody(password: password, header: self.header, stream: stream)
+        let fileName = "out.xml"
+
+        // Get the current file URL
+        let currentFileURL = URL(fileURLWithPath: #file)
+
+        // Get the directory URL
+        let directoryURL = currentFileURL.deletingLastPathComponent()
+
+        // Create the file URL for the "Passwords.kdbx" file
+        let fileURL = directoryURL.appendingPathComponent(fileName)
+        try self.body.cleanInnerData?.write(to: fileURL)
+    }
 }
