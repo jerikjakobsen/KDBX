@@ -8,6 +8,7 @@
 import Foundation
 import CryptoKit
 import Argon2Swift
+import Gzip
 
 @available(iOS 13.0, *)
 @available(macOS 10.15, *)
@@ -38,8 +39,12 @@ class KDBXBody {
     }
     init(password: String, header: KDBXHeader, stream: InputStream) throws {
         self.header = header
-        computeKeys(password: password)
-        
+        try computeKeys(password: password)
+        try getBlocks(stream: stream)
+        try decryptData()
+        if (header.compressionFlag ?? false) {
+            try unzipData()
+        }
     }
     
     func computeKeys(password: String) throws -> Data {
@@ -141,7 +146,8 @@ class KDBXBody {
         }
     }
     
-    func unzipDate() throws {
-        
+    func unzipData() throws {
+        let unzippedData: Data? = try self.innerDecryptedData?.gunzipped()
+        self.innerDecryptedData = unzippedData
     }
 }
