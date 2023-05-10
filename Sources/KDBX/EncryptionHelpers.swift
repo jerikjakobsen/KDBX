@@ -7,6 +7,7 @@
 
 import Foundation
 import CommonCrypto
+import CryptoKit
 
 enum AESType {
     case s256

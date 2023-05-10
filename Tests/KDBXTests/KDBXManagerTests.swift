@@ -27,6 +27,7 @@ final class KDBXManagerTests: XCTestCase {
             XCTAssertNotNil(stream)
             stream!.open()
             let manager = try KDBXManager(password: "butter", stream: stream!)
+            let xmlParser = try KDBXXMLParser(XMLData: manager.body.cleanInnerData!)
             stream?.close()
         }
     }
