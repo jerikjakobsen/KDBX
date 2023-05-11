@@ -8,13 +8,14 @@
 import Foundation
 import CommonCrypto
 import CryptoKit
+import Argon2Swift
 
-enum AESType {
+public enum AESType {
     case s256
     case s128
 }
 
-func encryptAESCBC(data: Data, key: Data, iv: Data, type: AESType) -> Data? {
+public func encryptAESCBC(data: Data, key: Data, iv: Data, type: AESType) -> Data? {
     let cryptLength = size_t(data.count + kCCBlockSizeAES128)
     var cryptData = Data(count: cryptLength)
     
@@ -46,7 +47,7 @@ func encryptAESCBC(data: Data, key: Data, iv: Data, type: AESType) -> Data? {
     }
 }
 
-func decryptAESCBC(data: Data, key: Data, iv: Data, type: AESType) -> Data? {
+public func decryptAESCBC(data: Data, key: Data, iv: Data, type: AESType) -> Data? {
     let cryptLength = size_t(data.count)
     var cryptData = Data(count: cryptLength)
     
@@ -77,3 +78,41 @@ func decryptAESCBC(data: Data, key: Data, iv: Data, type: AESType) -> Data? {
         return nil
     }
 }
+
+public func ArgonHash(password: Data, salt: Data, iterations: Int, memory: Int, parallelism: Int, keyType: String, version: Int) throws -> Data {
+    let argonSalt = Salt(bytes: salt)
+    return try Argon2Swift.hashPasswordBytes(password: password, salt: argonSalt, iterations: iterations, memory: memory, parallelism: parallelism, type: keyType == "Argon2d" ? .d : .id, version: version == 0x10 ? .V10 : .V13 ).hashData()
+}
+//
+//import Sodium
+//
+//class ProtectedStreamDecryptor {
+//    private let key: Data
+//    private let sodium: Sodium
+//
+//    init(key: Data) {
+//        self.key = key
+//        self.sodium = Sodium()
+//    }
+//
+//    func decryptChunk(encryptedChunk: Data) throws -> Data {
+//        let uint8ArrayData = encryptedChunk.withUnsafeBytes { Array($0.bindMemory(to: UInt8.self)) }
+//        let uint8ArrayKey = self.key.withUnsafeBytes { Array($0.bindMemory(to: UInt8.self)) }
+//        let decryptedChunk = sodium.secretBox.open(nonceAndAuthenticatedCipherText: uint8ArrayData, secretKey: uint8ArrayKey)
+//
+//        guard let decryptedData = decryptedChunk else {
+//            throw DecryptionError.decryptionFailed
+//        }
+//
+//        return Data(decryptedData)
+//    }
+//}
+//
+//enum DecryptionError: Error {
+//    case decryptionFailed
+//    // Add more specific error cases if needed
+//}
+//
+//
+//
+//

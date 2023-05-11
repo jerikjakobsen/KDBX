@@ -7,7 +7,7 @@
 
 import Foundation
 import CryptoKit
-import Argon2Swift
+import Encryption
 import Gzip
 
 @available(iOS 13.0, *)
@@ -77,8 +77,7 @@ class KDBXBody {
             guard let memory = self.header.kdfParameters?.M else {throw KDBXBodyError.NoArgonMemory}
             guard let parallelism = self.header.kdfParameters?.P else {throw KDBXBodyError.NoArgonParallelism}
             guard let version = self.header.kdfParameters?.V else {throw KDBXBodyError.NoArgonVersion}
-            let salt = Salt(bytes: Data(argSalt))
-            derivedKey = try Argon2Swift.hashPasswordBytes(password: compositeKey, salt: salt, iterations: Int(iterations), memory: Int(memory)/1024, parallelism: Int(parallelism), type: self.header.kdfParameters?.keyType == .Argon2d ? .d : .id, version: version == 0x10 ? .V10 : .V13 ).hashData()
+            derivedKey = try ArgonHash(password: compositeKey, salt: Data(argSalt), iterations: Int(iterations), memory: Int(memory)/1024, parallelism: Int(parallelism), keyType: self.header.kdfParameters?.keyType == .Argon2d ? "Argon2d" : "Argon2id", version: Int(version))
             
                 break
             case .AESKDF:
@@ -131,6 +130,7 @@ class KDBXBody {
         // Check if HMAC Signature is the same
         let blockKey = try HMACKeyForBlockIndex(index: index)
         let derivedHMACSignature = Data(HMAC<SHA256>.authenticationCode(for: (withUnsafeBytes(of: index.littleEndian) {Data($0)} + Data(blockLength) + Data(blockContent)), using: SymmetricKey(data: blockKey)))
+        print("hhhhh")
         guard derivedHMACSignature == Data(blockSignature) else {throw KDBXBodyError.DataCompromised}
         return Data(blockContent)
     }

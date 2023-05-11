@@ -12,7 +12,7 @@ final class KDBXManagerTests: XCTestCase {
     
     func testManagerInit() throws {
         if #available(macOS 13.0, *) {
-            let fileName = "Passwords.kdbx"
+            let fileName = "Passwords2.kdbx"
 
             // Get the current file URL
             let currentFileURL = URL(fileURLWithPath: #file)
@@ -27,7 +27,7 @@ final class KDBXManagerTests: XCTestCase {
             XCTAssertNotNil(stream)
             stream!.open()
             let manager = try KDBXManager(password: "butter", stream: stream!)
-            let xmlParser = try KDBXXMLParser(XMLData: manager.body.cleanInnerData!)
+            let xmlParser = try KDBXXMLParser(XMLData: manager.body.cleanInnerData!, cipherKey: manager.body.streamKey!)
             stream?.close()
         }
     }
