@@ -92,17 +92,6 @@ func aesKDF(seed: Data, info: Data? = nil, outputKeyLength: Int) -> Data? {
     return derivedKeyData.prefix(outputKeyLength)
 }
 
-func convertToDate(s: String) throws -> Date {
-    guard let d = Data(base64Encoded: s) else {
-        throw HelperError.DataDecoding
-    }
-    
-    let since01 = UInt64(littleEndian: d.withUnsafeBytes { $0.load(as: UInt64.self) })
-    let timeOffset = UInt64(62135596800)
-    return Date(timeIntervalSince1970: TimeInterval(since01 - timeOffset))
-}
-
-
 extension Data {
     func leftPadded(to size: Int) -> Data {
         if self.count >= size {

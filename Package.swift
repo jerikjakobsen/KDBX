@@ -13,7 +13,6 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/tmthecoder/Argon2Swift", branch: "main"),
         .package(url: "https://github.com/1024jp/GzipSwift", from: Version(6, 0, 0)),
-        //.package(url: "https://github.com/jedisct1/swift-sodium", branch: "master"),
         .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMajor(from: "1.7.1")),
         .package(url: "https://github.com/drmohundro/SWXMLHash.git", from: "7.0.0")
     ],
@@ -22,9 +21,8 @@ let package = Package(
             name: "KDBX",
             dependencies: [
                 .product(name: "Gzip", package: "GzipSwift"),
-                .product(name: "SWXMLHash", package: "SWXMLHash"),
-                "StreamCiphers",
-                "Encryption"
+                "Encryption",
+                "XML"
             ]
         ),
         .target(
@@ -37,6 +35,13 @@ let package = Package(
             name: "Encryption",
             dependencies: [
                 .product(name: "Argon2Swift", package: "Argon2Swift"),
+            ]
+        ),
+        .target(
+            name: "XML",
+            dependencies: [
+            "StreamCiphers",
+            .product(name: "SWXMLHash", package: "SWXMLHash"),
             ]
         ),
         .testTarget(

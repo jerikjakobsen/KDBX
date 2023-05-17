@@ -8,7 +8,8 @@
 import Foundation
 import CryptoSwift
 
-public class ChaChaStream {
+public class ChaChaStream: StreamCipher {
+    
     private let chacha: ChaCha20
     private var offset: Int = 0
     
@@ -23,6 +24,10 @@ public class ChaChaStream {
         offset += encryptedData.bytes.count
         
         return decryptedData
+    }
+    
+    public func encrypt(data: Data) throws {
+        //TODO: Implement Encrypt
     }
     
     private func padDataWithDummyBytes(data: Data, paddingLength: Int) -> Data {
