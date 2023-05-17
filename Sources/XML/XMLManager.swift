@@ -17,6 +17,7 @@ public class XMLManager {
     
     public let XMLData: Data
     public private(set) var entries: [Entry] = []
+    public private(set) var meta: Meta? = nil
     private let chachaStream: ChaChaStream
     
     enum ParserError: Error {
@@ -40,6 +41,7 @@ public class XMLManager {
             throw ParserError.UnexpectedNilOnOptional
         }
         let xmlParser = XMLHash.parse(xmlString)
+        self.meta = try xmlParser["KeePassFile"]["Meta"].value()
         self.entries = xmlParser["KeePassFile"]["Root"]["Group"]["Entry"].all.map { entry in
             let keyvals: [KeyVal?] = entry["String"].all.map { keyval in
                 return try? KeyVal.deserialize(keyval, streamCipher: self.chachaStream)

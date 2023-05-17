@@ -17,14 +17,13 @@ public struct CustomData: XMLObjectDeserialization {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "E MMM d HH:mm:ss yyyy z"
         
-        let keyVals: [KeyVal] = try element.value()
+        let keyVals: [KeyVal] = try element["Item"].value()
         var lastModified: Date? = nil
         var dateOffset: Int64? = Int64(-62135596800)
         
         for keyval in keyVals {
-            guard let keyStr = keyval.key, let valStr = keyval.value else {
-                continue
-            }
+            let keyStr = keyval.key
+            let valStr = keyval.value
             switch (keyStr) {
                 case "_LAST_MODIFIED":
                     lastModified = dateFormatter.date(from: valStr)

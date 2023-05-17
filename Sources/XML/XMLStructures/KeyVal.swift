@@ -15,19 +15,20 @@ enum KeyValError: Error {
     case UnableToBase64Decode
     case StringToDataNil
     case DecryptedStringNil
+    case DataToStringNil
 }
 
 public struct KeyVal: XMLObjectDeserialization {
-    let key: String?
-    let value: String?
-    let protected: Bool?
+    let key: String
+    let value: String
+    let protected: Bool
     
     public static func deserialize(_ element: XMLIndexer) throws -> KeyVal {
         
         return try KeyVal(
             key: element["Key"].value(),
             value: element["Value"].value(),
-            protected: element["Value"].element?.value(ofAttribute: "Protected"))
+            protected: element["Value"].element?.value(ofAttribute: "Protected") ?? false)
     }
     
     private static func isBase64Encoded(key: String) -> Bool {
@@ -35,13 +36,9 @@ public struct KeyVal: XMLObjectDeserialization {
     }
     
     public static func deserialize(_ element: XMLIndexer, streamCipher: StreamCipher? = nil) throws -> KeyVal {
-        guard let key: String = try element["Key"].value() else {
-            throw KeyValError.UnableToGetKey
-        }
+        let key: String = try element["Key"].value()
         
-        guard let val: String = try element["Value"].value() else {
-            throw KeyValError.UnableToGetValue
-        }
+        let val: String = try element["Value"].value()
         
         let protected = element["Value"].element?.value(ofAttribute: "Protected") ?? false
         
@@ -62,7 +59,9 @@ public struct KeyVal: XMLObjectDeserialization {
             }
             valData = decryptedData
         }
-        let strVal = String(data: valData, encoding: .utf8)
+        guard let strVal = String(data: valData, encoding: .utf8) else {
+            throw KeyValError.DataToStringNil
+        }
         return KeyVal(
             key: key,
             value: strVal,
