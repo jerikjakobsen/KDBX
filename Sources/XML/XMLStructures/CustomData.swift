@@ -8,14 +8,12 @@
 import Foundation
 import SWXMLHash
 
-public struct CustomData: XMLObjectDeserialization {
+public struct CustomData: XMLObjectDeserialization, Serializable {
     let lastModified: Date?
     let dateOffset: Int64?
+    static let dateFormatter = CustomDateFormatter()
     
     public static func deserialize(_ element: XMLIndexer) throws -> CustomData {
-        
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "E MMM d HH:mm:ss yyyy z"
         
         let keyVals: [KeyVal] = try element["Item"].value()
         var lastModified: Date? = nil
@@ -39,5 +37,38 @@ public struct CustomData: XMLObjectDeserialization {
         return CustomData(
             lastModified: lastModified,
             dateOffset: dateOffset)
+    }
+    
+    private func serializeItem(key: String?, val: String?) -> String {
+        
+        if (key == nil || val == nil) {
+            return ""
+        }
+        
+        return """
+<Item>
+    <Key>\(key!)</Key>
+    <Value>\(val!)</Value>
+</Item>
+"""
+    }
+    
+    public func serialize() -> String {
+        var dateOffsetString: String? = nil
+        if let dateOffsetTemp = dateOffset {
+            dateOffsetString = String(dateOffsetTemp)
+        }
+        
+        var lastModifiedString: String? = nil
+        if let lastModifiedTemp = lastModified {
+            lastModifiedString = CustomData.dateFormatter.string(from: lastModifiedTemp)
+        }
+        
+        return """
+<CustomData>
+\(serializeItem(key: "_LAST_MODIFIED", val: lastModifiedString))
+\(serializeItem(key: "DATE_OFFSET", val: dateOffsetString))
+</CustomData>
+"""
     }
 }
