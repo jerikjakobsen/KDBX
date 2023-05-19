@@ -12,7 +12,8 @@ enum FieldProtectionError: Error {
     case AllNil
 }
 
-public struct FieldProtection: XMLObjectDeserialization {
+public struct FieldProtection: XMLObjectDeserialization, Serializable {
+
     let title: Bool
     let username: Bool
     let password: Bool
@@ -35,4 +36,17 @@ public struct FieldProtection: XMLObjectDeserialization {
             url: url ?? false,
             notes: notes ?? false)
     }
+    
+    func serialize() -> String {
+        return """
+<MemoryProtection>
+    <ProtectTitle>\(title)</ProtectTitle>
+    <ProtectUserName>\(username)</ProtectUserName>
+    <ProtectPassword>\(password)</ProtectPassword>
+    <ProtectURL>\(url)</ProtectURL>
+    <ProtectNotes>\(notes)</ProtectNotes>
+</MemoryProtection>
+"""
+    }
+    
 }
