@@ -8,7 +8,7 @@
 import Foundation
 import SWXMLHash
 
-public struct Color: XMLObjectDeserialization {
+public struct Color: XMLObjectDeserialization, Serializable {
     let red: Float
     let green: Float
     let blue: Float
@@ -20,5 +20,16 @@ public struct Color: XMLObjectDeserialization {
             green: element["Green"].value(),
             blue: element["Blue"].value(),
             alpha: element["Alpha"].value())
+    }
+    
+    public func serialize() -> String {
+        return """
+<Color>
+    <Red>\(red)</Red>
+    <Green>\(green)</Green>
+    <Blue>\(blue)</Blue>
+    <Alpha>\(alpha)</Alpha>
+</Color>
+"""
     }
 }
