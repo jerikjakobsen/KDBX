@@ -18,13 +18,12 @@ enum KeyValError: Error {
     case DataToStringNil
 }
 
-public struct KeyVal: XMLObjectDeserialization {
+public struct KeyVal: XMLObjectDeserialization, Serializable {
     let key: String
     let value: String
     let protected: Bool
     
     public static func deserialize(_ element: XMLIndexer) throws -> KeyVal {
-        
         return try KeyVal(
             key: element["Key"].value(),
             value: element["Value"].value(),
@@ -66,5 +65,31 @@ public struct KeyVal: XMLObjectDeserialization {
             key: key,
             value: strVal,
             protected: protected)
+    }
+    
+    func serialize(base64Encoded: Bool, streamCipher: StreamCipher?) throws -> String {
+        let b64encoded = base64Encoded || KeyVal.isBase64Encoded(key: key) || self.protected
+        
+        guard var valData = value.data(using: .utf8) else {
+            throw KeyValError.StringToDataNil
+        }
+        if let cipher = streamCipher {
+            valData = try cipher.encrypt(data: valData)
+        }
+        
+        if (b64encoded) {
+            valData = valData.base64EncodedData()
+        }
+        
+        guard let valString = String(data: valData, encoding: .utf8) else {
+            throw KeyValError.DataToStringNil
+        }
+        
+        return """
+<String>
+        <Key>\(key)</Key>
+        <Value>\(valString)</Value>
+</String>
+"""
     }
 }
