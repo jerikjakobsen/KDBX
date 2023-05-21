@@ -9,5 +9,5 @@ import Foundation
 
 public protocol StreamCipher {
     func decrypt(encryptedData: Data) throws -> Data
-    func encrypt(data: Data) throws
+    func encrypt(data: Data) throws -> Data
 }
