@@ -11,23 +11,29 @@ import CryptoSwift
 public class ChaChaStream: StreamCipher {
     
     private let chacha: ChaCha20
-    private var offset: Int = 0
+    private var encryptOffset: Int = 0
+    private var decryptOffset: Int = 0
     
     public init(key: Data, nonce: Data) throws {
         self.chacha = try ChaCha20(key: key.bytes, iv: nonce.bytes)
     }
     
     public func decrypt(encryptedData: Data) throws -> Data {
-        let paddedData = padDataWithDummyBytes(data: encryptedData, paddingLength: offset)
+        let paddedData = padDataWithDummyBytes(data: encryptedData, paddingLength: decryptOffset)
         let decryptedDataWithPad = try Data(chacha.decrypt(paddedData.bytes))
-        let decryptedData = decryptedDataWithPad.subdata(in: offset..<decryptedDataWithPad.count)
-        offset += encryptedData.bytes.count
+        let decryptedData = decryptedDataWithPad.subdata(in: decryptOffset..<decryptedDataWithPad.count)
+        decryptOffset += encryptedData.bytes.count
         
         return decryptedData
     }
     
-    public func encrypt(data: Data) throws {
-        //TODO: Implement Encrypt
+    public func encrypt(data: Data) throws -> Data {
+        let paddedData = padDataWithDummyBytes(data: data, paddingLength: encryptOffset)
+        let encryptedDataWithPad = try Data(chacha.encrypt(paddedData.bytes))
+        let encryptedData = encryptedDataWithPad.subdata(in: encryptOffset..<encryptedDataWithPad.count)
+        encryptOffset += data.bytes.count
+        
+        return encryptedData
     }
     
     private func padDataWithDummyBytes(data: Data, paddingLength: Int) -> Data {
