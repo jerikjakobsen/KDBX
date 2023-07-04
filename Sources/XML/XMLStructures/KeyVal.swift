@@ -19,15 +19,15 @@ enum KeyValError: Error {
 }
 
 public struct KeyVal: XMLObjectDeserialization, Serializable {
-    let key: String
-    let value: String
-    let protected: Bool
+    let key: XMLString
+    let value: XMLString
+    public let name: String
     
     public static func deserialize(_ element: XMLIndexer) throws -> KeyVal {
         return try KeyVal(
             key: element["Key"].value(),
             value: element["Value"].value(),
-            protected: element["Value"].element?.value(ofAttribute: "Protected") ?? false)
+            name: element.element?.name ?? "String")
     }
     
     private static func isBase64Encoded(key: String) -> Bool {
@@ -35,61 +35,41 @@ public struct KeyVal: XMLObjectDeserialization, Serializable {
     }
     
     public static func deserialize(_ element: XMLIndexer, streamCipher: StreamCipher? = nil) throws -> KeyVal {
-        let key: String = try element["Key"].value()
-        
-        let val: String = try element["Value"].value()
-        
-        let protected = element["Value"].element?.value(ofAttribute: "Protected") ?? false
-        
-        guard var valData = val.data(using: .utf8) else {
-            throw KeyValError.StringToDataNil
+        guard let keyElement = element["Key"].element else {
+            throw KeyValError.UnableToGetKey
         }
         
-        if (isBase64Encoded(key: key)) {
-            guard let base64Decoded = Data(base64Encoded: val) else {
-                throw KeyValError.UnableToBase64Decode
-            }
-            valData = base64Decoded
+        guard let valElement = element["Value"].element else {
+            throw KeyValError.UnableToGetValue
         }
+        let key: XMLString = try XMLString.deserialize(keyElement, streamCipher: streamCipher)
         
-        if (streamCipher != nil && protected) {
-            guard let decryptedData = try streamCipher?.decrypt(encryptedData: valData) else {
-                throw KeyValError.DecryptedStringNil
-            }
-            valData = decryptedData
-        }
-        guard let strVal = String(data: valData, encoding: .utf8) else {
-            throw KeyValError.DataToStringNil
-        }
+        let val: XMLString = try XMLString.deserialize(valElement, base64Encoded: isBase64Encoded(key: key.content), streamCipher: streamCipher)
+        
         return KeyVal(
             key: key,
-            value: strVal,
-            protected: protected)
+            value: val,
+            name: element.element?.name ?? "String")
     }
     
-    func serialize(base64Encoded: Bool, streamCipher: StreamCipher?) throws -> String {
-        let b64encoded = base64Encoded || KeyVal.isBase64Encoded(key: key) || self.protected
+    func serialize(base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) throws -> String {
+        let b64encoded = base64Encoded || KeyVal.isBase64Encoded(key: key.content)
         
-        guard var valData = value.data(using: .utf8) else {
-            throw KeyValError.StringToDataNil
-        }
-        if let cipher = streamCipher {
-            valData = try cipher.encrypt(data: valData)
-        }
-        
-        if (b64encoded) {
-            valData = valData.base64EncodedData()
-        }
-        
-        guard let valString = String(data: valData, encoding: .utf8) else {
-            throw KeyValError.DataToStringNil
-        }
-        
-        return """
-<String>
-        <Key>\(key)</Key>
-        <Value>\(valString)</Value>
-</String>
-"""
+        return try """
+            <\(name)>
+                    \(key.serialize())
+                    \(value.serialize(base64Encoded: b64encoded, streamCipher: streamCipher))
+            </\(name)>
+            """
+    }
+    
+    func modify(newKey: String? = nil, newValue: String? = nil ) -> KeyVal {
+        let keyXMLString = XMLString(content: newKey ?? key.content,
+                                     name: key.name,
+                                     properties: key.properties)
+        let valueXMLString = XMLString(content: newValue ?? value.content,
+                                       name: value.name,
+                                       properties: value.properties)
+        return KeyVal(key: keyXMLString, value: valueXMLString, name: self.name)
     }
 }

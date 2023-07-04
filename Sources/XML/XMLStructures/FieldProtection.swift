@@ -19,6 +19,7 @@ public struct FieldProtection: XMLObjectDeserialization, Serializable {
     let password: Bool
     let url: Bool
     let notes: Bool
+    let Name: String = "MemoryProtection"
     
     public static func deserialize(_ element: XMLIndexer) throws -> FieldProtection {
         let title: Bool? = try? element["ProtectTitle"].value()

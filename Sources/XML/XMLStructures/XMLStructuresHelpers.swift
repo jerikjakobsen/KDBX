@@ -7,6 +7,10 @@
 
 import Foundation
 
+enum DateHelperError: Error {
+    case CouldNotEncodeString
+}
+
 func convertToDate(s: String, offsetFromUnix: Int64 = Int64(-62135596800), base64Encoded: Bool = true) throws -> Date {
     var d: Data
     if (base64Encoded) {
@@ -24,4 +28,19 @@ func convertToDate(s: String, offsetFromUnix: Int64 = Int64(-62135596800), base6
     
     let time = UInt64(littleEndian: d.withUnsafeBytes { $0.load(as: UInt64.self) })
     return Date(timeIntervalSince1970: TimeInterval(Int64(time) + offsetFromUnix))
+}
+
+func convertToString(date: Date, offsetFromUnix: Int64 = Int64(-62135596800), base64Encoded: Bool = true) throws-> String {
+    var timeInMilliseconds: Int64 = (Int64(date.timeIntervalSince1970) - offsetFromUnix).littleEndian
+    var timeAsData = Data(bytes: &timeInMilliseconds, count: MemoryLayout<Int64>.size)
+    var finalString: String = ""
+    if (base64Encoded) {
+        finalString = timeAsData.base64EncodedString()
+    } else {
+        guard let s = String(data: timeAsData, encoding: .utf8) else {
+            throw DateHelperError.CouldNotEncodeString
+        }
+        finalString = s
+    }
+    return finalString
 }

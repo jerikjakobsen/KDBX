@@ -13,7 +13,16 @@ protocol Serializable {
 }
 
 extension Serializable {
-    func serialize(base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) -> String {
+    public func serialize(base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) -> String {
         return serialize(base64Encoded: base64Encoded, streamCipher: streamCipher)
+    }
+}
+
+extension Serializable? {
+    public func serialize(base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) -> String {
+        if let notNil = self {
+            return notNil.serialize(base64Encoded: base64Encoded, streamCipher: streamCipher)
+        }
+        return ""
     }
 }

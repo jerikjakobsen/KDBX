@@ -16,7 +16,7 @@ import CryptoKit
 public class XMLManager {
     
     public let XMLData: Data
-    public private(set) var entries: [Entry] = []
+    public private(set) var group: Group? = nil
     public private(set) var meta: Meta? = nil
     private let chachaStream: ChaChaStream
     
@@ -33,6 +33,7 @@ public class XMLManager {
         let nonce = hashedKey.subdata(in: 32..<(32 + 12))
         
         self.chachaStream = try ChaChaStream(key: key, nonce: nonce)
+
         try self.processXMLData()
     }
     
@@ -42,16 +43,19 @@ public class XMLManager {
         }
         let xmlParser = XMLHash.parse(xmlString)
         self.meta = try xmlParser["KeePassFile"]["Meta"].value()
-        self.entries = xmlParser["KeePassFile"]["Root"]["Group"]["Entry"].all.map { entry in
-            let keyvals: [KeyVal?] = entry["String"].all.map { keyval in
-                return try? KeyVal.deserialize(keyval, streamCipher: self.chachaStream)
-            }
-            let times: Times? = try? entry["Times"].value()
-            let uuid: String? = try? entry["UUID"].value()
-            let iconID: String? = try? entry["IconID"].value()
-            
-            return Entry(KeyVals: keyvals, UUID: uuid, iconID: iconID, times: times)
-        }
+        self.group = try Group.deserialize(xmlParser["KeePassFile"]["Root"]["Group"], streamCipher: self.chachaStream)
+    }
+    
+    public func toXML() throws -> String {
+        return try """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <KeePassFile>
+                \(self.meta?.serialize(base64Encoded: true, streamCipher: self.chachaStream) ?? "")
+                <Root>
+                    \(self.group?.serialize(base64Encoded: true, streamCipher: self.chachaStream) ?? "")
+                <Root>
+            </KeePassFile>
+        """
     }
     
 }

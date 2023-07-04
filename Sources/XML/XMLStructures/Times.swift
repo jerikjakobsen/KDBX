@@ -7,12 +7,15 @@
 
 import Foundation
 import SWXMLHash
+import StreamCiphers
 
 enum DateError: Error {
     case DateDecoding
 }
-
-public struct Times: XMLObjectDeserialization {
+@available(iOS 13.0, *)
+@available(macOS 10.15, *)
+@available(macOS 13.0, *)
+public struct Times: XMLObjectDeserialization, Serializable {
     let lastModificationTime: Date?
     let creationTime: Date?
     let lastAccessedTime: Date?
@@ -30,8 +33,32 @@ public struct Times: XMLObjectDeserialization {
         return try Times(
             lastModificationTime: convertToDate(s: lmtStr),
             creationTime: convertToDate(s: ctStr),
-            lastAccessedTime: convertToDate(s: latStr),
+            lastAccessedTime: Date.now,
             expires: expires,
             expiryTime: convertToDate(s: et))
+    }
+    
+    public func serialize(base64Encoded: Bool = true, streamCipher: StreamCipher? = nil) throws -> String {
+        return try """
+<Times>
+    <LastModificationTime>\(convertToString(date: lastModificationTime!))</LastModificationTime>
+    <CreationTime>\(convertToString(date: creationTime!))</CreationTime>
+    <LastAccessTime>\(convertToString(date: lastAccessedTime!))</LastAccessTime>
+    <ExpiryTime>\(convertToString(date: expiryTime!))</ExpiryTime>
+    <Expires>\(expires ?? false ? "True" : "False")</Expires>
+</Times>
+"""
+    }
+    
+    public func modify(newLastModificationTime: Date? = nil, newLastAccessTime: Date? = nil, newExpiryTime: Date? = nil, newExpires: Bool? = nil) -> Times {
+        return Times(lastModificationTime: newLastModificationTime ?? self.lastModificationTime,
+                     creationTime: self.creationTime,
+                     lastAccessedTime: newLastAccessTime ?? self.lastAccessedTime,
+                     expires: newExpires ?? self.expires,
+                     expiryTime: newExpiryTime ?? self.expiryTime)
+    }
+    
+    public func new(creationTime: Date, expires: Bool, expiryTime: Date? = nil) -> Times {
+        return Times(lastModificationTime: creationTime, creationTime: creationTime, lastAccessedTime: creationTime, expires: expires, expiryTime: expiryTime)
     }
 }
