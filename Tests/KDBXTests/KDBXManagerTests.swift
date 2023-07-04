@@ -24,6 +24,7 @@ final class KDBXManagerTests: XCTestCase {
             let fileURL = directoryURL.appendingPathComponent(fileName)
             XCTAssertNotNil(fileURL)
             let manager = try KDBXManager(password: "butter", fileURL: fileURL)
+            print(try manager.XMLParser.toXML())
         }
     }
     
