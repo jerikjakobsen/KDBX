@@ -24,7 +24,7 @@ public struct Times: XMLObjectDeserialization, Serializable {
     let timeOffset: Int64?
     
     public static func deserialize(_ element: XMLIndexer) throws -> Times {
-        // Assumes time offset is from 1/1/01 12:00 AM GMT (if not timeOffset is available)
+        // Assumes time offset is from 1/1/01 12:00 AM GMT (if timeOffset is not available)
         let lmtStr: String = try element["LastModificationTime"].value()
         let ctStr: String = try element["CreationTime"].value()
         let expires: Bool = try element["Expires"].value()
@@ -33,6 +33,8 @@ public struct Times: XMLObjectDeserialization, Serializable {
         var timeOffsetInt64: Int64? = nil
         if let timeOffset: String = timeOffsetStr {
             timeOffsetInt64 = Int64(timeOffset)
+        } else {
+            timeOffsetInt64 = Int64(-62135596800)
         }
         
         return try Times(
