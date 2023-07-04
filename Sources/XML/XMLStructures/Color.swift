@@ -22,6 +22,13 @@ public struct Color: XMLObjectDeserialization {
             blue: element["Blue"].value(),
             alpha: element["Alpha"].value())
     }
+    
+    public func modify(red: Float? = nil, green: Float? = nil, blue: Float? = nil, alpha: Float? = nil) -> Color {
+        return Color(red: red ?? self.red,
+                     green: green ?? self.green,
+                     blue: blue ?? self.blue,
+                     alpha: alpha ?? self.alpha)
+    }
 }
 
 extension Color: Serializable {

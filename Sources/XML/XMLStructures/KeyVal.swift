@@ -70,12 +70,9 @@ public struct KeyVal: XMLObjectDeserialization, Serializable {
     }
     
     public func modify(newKey: String? = nil, newValue: String? = nil ) -> KeyVal {
-        let keyXMLString = XMLString(content: newKey ?? key.content,
-                                     name: key.name,
-                                     properties: key.properties)
-        let valueXMLString = XMLString(content: newValue ?? value.content,
-                                       name: value.name,
-                                       properties: value.properties)
-        return KeyVal(key: keyXMLString, value: valueXMLString, name: self.name)
+        if (newKey == nil && newValue == nil) {
+            return self
+        }
+        return KeyVal(key: self.key.modify(content: newKey), value: self.value.modify(content: newValue), name: self.name)
     }
 }

@@ -27,19 +27,17 @@ public struct Group: XMLObjectDeserialization, Serializable {
     }
     
     public static func deserialize(_ element: XMLIndexer, streamCipher: StreamCipher) throws -> Group {
-    let entries = try element["Entry"].all.map { entry in
-            let keyvals: [KeyVal] = try entry["String"].all.map { keyval in
-                return try KeyVal.deserialize(keyval, streamCipher: streamCipher)
-            }
-            let times: Times? = try? entry["Times"].value()
-            let uuid: XMLString? = try? entry["UUID"].value()
-            let iconID: XMLString? = try? entry["IconID"].value()
-            return Entry(KeyVals: keyvals, UUID: uuid, iconID: iconID, times: times)
+        let entries = try element["Entry"].all.map { entry in
+            return try Entry.deserialize(entry, streamCipher: streamCipher)
         }
+        
+        var times: Times = try element["Times"].value()
+        times = times.update(modified: false)
+        
         return try Group(UUID: element["UUID"].value(),
                          name: element["Name"].value(),
                          iconID: element["IconID"].value(),
-                         times: element["Times"].value(),
+                         times: times,
                          entries: entries)
     }
     
@@ -62,7 +60,7 @@ public struct Group: XMLObjectDeserialization, Serializable {
         return Group(UUID: self.UUID,
                      name: self.name,
                      iconID: self.iconID,
-                     times: self.times?.modify(newLastModificationTime: Date.now, newLastAccessTime: Date.now),
+                     times: self.times?.update(modified: true),
                      entries: (self.entries ?? []) + [entry])
     }
     
@@ -70,9 +68,21 @@ public struct Group: XMLObjectDeserialization, Serializable {
         return Group(UUID: self.UUID,
                      name: self.name,
                      iconID: self.iconID,
-                     times: self.times?.modify(newLastModificationTime: Date.now, newLastAccessTime: Date.now),
+                     times: self.times?.update(modified: true),
                      entries: self.entries?.filter({ entry in
             return entry.UUID?.content != UUID
         }))
+    }
+    
+    public func modify(newName: String? = nil, newIconID: String? = nil) -> Group {
+        if (newName == nil && newIconID == nil) {
+            return self
+        }
+        
+        return Group(UUID: self.UUID,
+                     name: self.name?.modify(content: newName),
+                     iconID: self.iconID?.modify(content: newIconID),
+                     times: self.times?.update(modified: true),
+                     entries: self.entries)
     }
 }

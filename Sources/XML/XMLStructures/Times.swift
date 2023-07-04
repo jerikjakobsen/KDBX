@@ -24,10 +24,9 @@ public struct Times: XMLObjectDeserialization, Serializable {
     let timeOffset: Int64?
     
     public static func deserialize(_ element: XMLIndexer) throws -> Times {
-        // Assumes time offset is from 1/1/01 12:00 AM GMT
+        // Assumes time offset is from 1/1/01 12:00 AM GMT (if not timeOffset is available)
         let lmtStr: String = try element["LastModificationTime"].value()
         let ctStr: String = try element["CreationTime"].value()
-        //let latStr: String = try element["LastAccessTime"].value()
         let expires: Bool = try element["Expires"].value()
         let et: String = try element["ExpiryTime"].value()
         let timeOffsetStr: String? = try? element["TimeOffset"].value()
@@ -60,12 +59,19 @@ public struct Times: XMLObjectDeserialization, Serializable {
     }
     
     public func modify(newLastModificationTime: Date? = nil, newLastAccessTime: Date? = nil, newExpiryTime: Date? = nil, newExpires: Bool? = nil, newTimeOffset: Int64? = nil) -> Times {
+        if (newLastAccessTime == nil && newLastModificationTime == nil && newExpires == nil && newExpiryTime == nil && newTimeOffset == nil) {
+            return self
+        }
         return Times(lastModificationTime: newLastModificationTime ?? self.lastModificationTime,
                      creationTime: self.creationTime,
                      lastAccessedTime: newLastAccessTime ?? self.lastAccessedTime,
                      expires: newExpires ?? self.expires,
                      expiryTime: newExpiryTime ?? self.expiryTime,
                      timeOffset: newTimeOffset ?? self.timeOffset)
+    }
+    
+    public func update(modified: Bool) -> Times {
+        return self.modify(newLastModificationTime: modified ? Date.now : nil, newLastAccessTime: Date.now)
     }
     
     public static func now(expires: Bool, expiryTime: Date? = nil) -> Times {

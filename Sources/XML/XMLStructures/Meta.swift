@@ -16,9 +16,7 @@ public struct Meta: XMLObjectDeserialization, Serializable {
     let generator: XMLString?
     let databaseName: XMLString?
     let databaseDescription: XMLString?
-    //let memoryProtection: FieldProtection?
     let times: Times?
-    //let customData: CustomData?
     let color: Color?
     
     public static func new(generator: String, databaseName: String, databaseDescription: String, color: Color) -> Meta {
@@ -31,11 +29,15 @@ public struct Meta: XMLObjectDeserialization, Serializable {
     }
     
     public static func deserialize(_ element: XMLIndexer) throws -> Meta {
+        
+        var times: Times? = try? element["Times"].value()
+        times = times?.update(modified: false)
+        
         return Meta(
             generator: try? element["Generator"].value(),
             databaseName: try element["DatabaseName"].value(),
             databaseDescription: try? element["DatabaseDescription"].value(),
-            times: try? element["Times"].value(),
+            times: times,
             color: try? element["Color"].value())
     }
     
@@ -49,5 +51,16 @@ public struct Meta: XMLObjectDeserialization, Serializable {
         \(times?.serialize() ?? "")
     </Meta>
 """
+    }
+    
+    public func modify(newGenerator: String? = nil, newDatabaseName: String? = nil, newDatabaseDescription: String? = nil, newColor: Color? = nil) -> Meta {
+        if (newGenerator == nil && newDatabaseName == nil && newDatabaseDescription == nil && newColor == nil) {
+            return self
+        }
+        return Meta(generator: self.generator?.modify(content: newGenerator),
+                    databaseName: self.databaseName?.modify(content: newDatabaseName),
+                    databaseDescription: self.databaseDescription?.modify(content: newDatabaseDescription),
+                    times: self.times?.update(modified: true),
+                    color: newColor ?? self.color)
     }
 }

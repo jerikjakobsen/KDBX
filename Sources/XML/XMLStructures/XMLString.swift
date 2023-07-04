@@ -91,4 +91,11 @@ struct XMLString: XMLValueDeserialization, Serializable {
             <\(name)\(propertiesXMLize())>\(valString)</\(name)>
             """
     }
+    
+    public func modify(content: String? = nil, name: String? = nil, properties: [String: String]? = nil) -> XMLString {
+        if (content == nil && name == nil && properties == nil) {
+            return self
+        }
+        return XMLString(content: content ?? self.content, name: name ?? self.name, properties: properties ?? self.properties)
+    }
 }
