@@ -18,6 +18,16 @@ public struct Entry: Serializable, XMLObjectDeserialization {
     let iconID: XMLString?
     let times: Times?
     
+    public static func new(iconID: String? = nil, keyVals: [KeyVal]? = [], expires: Bool = false, expiryTime: Date? = nil) -> Entry {
+        let uuidXMLString = XMLString(content: Foundation.UUID().uuidString, name: "UUID")
+        var iconIDXMLString: XMLString? = nil
+        if let icID = iconID {
+            iconIDXMLString = XMLString(content: icID, name: "String")
+        }
+        
+        return Entry(KeyVals: keyVals, UUID: uuidXMLString, iconID: iconIDXMLString, times: Times.now(expires: expires, expiryTime: expiryTime))
+    }
+    
     public static func deserialize(_ element: XMLIndexer) throws -> Entry {
         
         

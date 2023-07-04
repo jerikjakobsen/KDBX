@@ -23,6 +23,12 @@ public struct KeyVal: XMLObjectDeserialization, Serializable {
     let value: XMLString
     public let name: String
     
+    public static func new(key: String, value: String, protected: Bool) -> KeyVal {
+        let keyXMLString = XMLString(content: key, name: "Key", properties: nil)
+        let valueXMLString = XMLString(content: value, name: "Value", properties: protected ? ["Protected": "True"] : nil)
+        return KeyVal(key: keyXMLString, value: valueXMLString, name: "String")
+    }
+    
     public static func deserialize(_ element: XMLIndexer) throws -> KeyVal {
         return try KeyVal(
             key: element["Key"].value(),
@@ -52,7 +58,7 @@ public struct KeyVal: XMLObjectDeserialization, Serializable {
             name: element.element?.name ?? "String")
     }
     
-    func serialize(base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) throws -> String {
+    public func serialize(base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) throws -> String {
         let b64encoded = base64Encoded || KeyVal.isBase64Encoded(key: key.content)
         
         return try """
@@ -63,7 +69,7 @@ public struct KeyVal: XMLObjectDeserialization, Serializable {
             """
     }
     
-    func modify(newKey: String? = nil, newValue: String? = nil ) -> KeyVal {
+    public func modify(newKey: String? = nil, newValue: String? = nil ) -> KeyVal {
         let keyXMLString = XMLString(content: newKey ?? key.content,
                                      name: key.name,
                                      properties: key.properties)

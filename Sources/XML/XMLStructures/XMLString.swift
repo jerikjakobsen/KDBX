@@ -20,10 +20,13 @@ enum XMLStringError: Error {
 struct XMLString: XMLValueDeserialization, Serializable {
     public let content: String
     public let name: String
-    public let properties: [String: XMLAttribute]?
+    public var properties: [String: String]? = nil
     
     static func deserialize(_ element: SWXMLHash.XMLElement) throws -> XMLString {
-        return XMLString(content: element.text, name: element.name, properties: element.allAttributes)
+        let attributes = element.allAttributes.mapValues { attr in
+            return attr.text
+        }
+        return XMLString(content: element.text, name: element.name, properties: attributes)
     }
     static func deserialize(_ attribute: SWXMLHash.XMLAttribute) throws -> XMLString {
         return XMLString(content: attribute.text, name: attribute.name, properties: nil)
@@ -50,7 +53,10 @@ struct XMLString: XMLValueDeserialization, Serializable {
         guard let strVal = String(data: valData, encoding: .utf8) else {
             throw XMLStringError.DataToStringNil
         }
-        return XMLString(content: strVal, name: element.name, properties: element.allAttributes)
+        let attributes = element.allAttributes.mapValues { attr in
+            return attr.text
+        }
+        return XMLString(content: strVal, name: element.name, properties: attributes)
     }
     
     private func propertiesXMLize() -> String {
@@ -59,7 +65,7 @@ struct XMLString: XMLValueDeserialization, Serializable {
             return ""
         }
         return " " + String(p.map { (key, value) in
-            return "\(key)=\"\(value.text)\""
+            return "\(key)=\"\(value)\""
         }.joined(separator: " "))
     }
     
@@ -69,7 +75,7 @@ struct XMLString: XMLValueDeserialization, Serializable {
             throw XMLStringError.StringToDataNil
         }
         
-        if let cipher = streamCipher, (properties?["Protected"]?.text ?? "False") == "True" {
+        if let cipher = streamCipher, (properties?["Protected"] ?? "False") == "True" {
             strData = try cipher.encrypt(data: strData)
         }
         

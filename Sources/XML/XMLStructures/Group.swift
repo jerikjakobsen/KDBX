@@ -19,6 +19,13 @@ public struct Group: XMLObjectDeserialization, Serializable {
     let times: Times?
     let entries: [Entry]?
     
+    public static func new(name: String, iconID: String, entries: [Entry]? = []) -> Group {
+        let UUIDXMLString = XMLString(content: Foundation.UUID().uuidString, name: "UUID")
+        let nameXMLString = XMLString(content: name, name: "Name")
+        let iconIDXMLString = XMLString(content: iconID, name: "IconID")
+        return Group(UUID: UUIDXMLString, name: nameXMLString, iconID: iconIDXMLString, times: Times.now(expires: false), entries: entries)
+    }
+    
     public static func deserialize(_ element: XMLIndexer, streamCipher: StreamCipher) throws -> Group {
     let entries = try element["Entry"].all.map { entry in
             let keyvals: [KeyVal] = try entry["String"].all.map { keyval in

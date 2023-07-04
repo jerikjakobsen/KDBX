@@ -21,26 +21,35 @@ public struct Times: XMLObjectDeserialization, Serializable {
     let lastAccessedTime: Date?
     let expires: Bool?
     let expiryTime: Date?
+    let timeOffset: Int64?
     
     public static func deserialize(_ element: XMLIndexer) throws -> Times {
         // Assumes time offset is from 1/1/01 12:00 AM GMT
         let lmtStr: String = try element["LastModificationTime"].value()
         let ctStr: String = try element["CreationTime"].value()
-        let latStr: String = try element["LastAccessTime"].value()
+        //let latStr: String = try element["LastAccessTime"].value()
         let expires: Bool = try element["Expires"].value()
         let et: String = try element["ExpiryTime"].value()
+        let timeOffsetStr: String? = try? element["TimeOffset"].value()
+        var timeOffsetInt64: Int64? = nil
+        if let timeOffset: String = timeOffsetStr {
+            timeOffsetInt64 = Int64(timeOffset)
+        }
         
         return try Times(
-            lastModificationTime: convertToDate(s: lmtStr),
-            creationTime: convertToDate(s: ctStr),
+            lastModificationTime: convertToDate(s: lmtStr, offsetFromUnix: timeOffsetInt64),
+            creationTime: convertToDate(s: ctStr, offsetFromUnix: timeOffsetInt64),
             lastAccessedTime: Date.now,
             expires: expires,
-            expiryTime: convertToDate(s: et))
+            expiryTime: convertToDate(s: et, offsetFromUnix: timeOffsetInt64),
+            timeOffset: timeOffsetInt64
+        )
     }
     
     public func serialize(base64Encoded: Bool = true, streamCipher: StreamCipher? = nil) throws -> String {
         return try """
 <Times>
+    \(timeOffset != nil ? XMLString(content: String(timeOffset!), name: "TimeOffset").serialize() : "")
     <LastModificationTime>\(convertToString(date: lastModificationTime!))</LastModificationTime>
     <CreationTime>\(convertToString(date: creationTime!))</CreationTime>
     <LastAccessTime>\(convertToString(date: lastAccessedTime!))</LastAccessTime>
@@ -50,15 +59,16 @@ public struct Times: XMLObjectDeserialization, Serializable {
 """
     }
     
-    public func modify(newLastModificationTime: Date? = nil, newLastAccessTime: Date? = nil, newExpiryTime: Date? = nil, newExpires: Bool? = nil) -> Times {
+    public func modify(newLastModificationTime: Date? = nil, newLastAccessTime: Date? = nil, newExpiryTime: Date? = nil, newExpires: Bool? = nil, newTimeOffset: Int64? = nil) -> Times {
         return Times(lastModificationTime: newLastModificationTime ?? self.lastModificationTime,
                      creationTime: self.creationTime,
                      lastAccessedTime: newLastAccessTime ?? self.lastAccessedTime,
                      expires: newExpires ?? self.expires,
-                     expiryTime: newExpiryTime ?? self.expiryTime)
+                     expiryTime: newExpiryTime ?? self.expiryTime,
+                     timeOffset: newTimeOffset ?? self.timeOffset)
     }
     
-    public func new(creationTime: Date, expires: Bool, expiryTime: Date? = nil) -> Times {
-        return Times(lastModificationTime: creationTime, creationTime: creationTime, lastAccessedTime: creationTime, expires: expires, expiryTime: expiryTime)
+    public static func now(expires: Bool, expiryTime: Date? = nil) -> Times {
+        return Times(lastModificationTime: Date.now, creationTime: Date.now, lastAccessedTime: Date.now, expires: expires, expiryTime: expiryTime, timeOffset: 0)
     }
 }

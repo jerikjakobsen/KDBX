@@ -14,27 +14,25 @@ public struct Color: XMLObjectDeserialization {
     let green: Float
     let blue: Float
     let alpha: Float
-    let name: String
     
     public static func deserialize(_ element: XMLIndexer) throws -> Color {
         return try Color(
             red: element["Red"].value(),
             green: element["Green"].value(),
             blue: element["Blue"].value(),
-            alpha: element["Alpha"].value(),
-            name: element.element?.name ?? "")
+            alpha: element["Alpha"].value())
     }
 }
 
 extension Color: Serializable {
     public func serialize() -> String {
         return """
-<\(name)>
+<Color>
     <Red>\(red)</Red>
     <Green>\(green)</Green>
     <Blue>\(blue)</Blue>
     <Alpha>\(alpha)</Alpha>
-</\(name)>
+</Color>
 """
     }
 }

@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import XML
 @testable import KDBX
 
 final class KDBXManagerTests: XCTestCase {

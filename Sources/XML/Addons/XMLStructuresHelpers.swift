@@ -11,7 +11,8 @@ enum DateHelperError: Error {
     case CouldNotEncodeString
 }
 
-func convertToDate(s: String, offsetFromUnix: Int64 = Int64(-62135596800), base64Encoded: Bool = true) throws -> Date {
+func convertToDate(s: String, offsetFromUnix: Int64? = nil, base64Encoded: Bool = true) throws -> Date {
+    let defaultOffset = Int64(-62135596800)
     var d: Data
     if (base64Encoded) {
         guard let stringData = Data(base64Encoded: s) else {
@@ -27,11 +28,12 @@ func convertToDate(s: String, offsetFromUnix: Int64 = Int64(-62135596800), base6
     
     
     let time = UInt64(littleEndian: d.withUnsafeBytes { $0.load(as: UInt64.self) })
-    return Date(timeIntervalSince1970: TimeInterval(Int64(time) + offsetFromUnix))
+    return Date(timeIntervalSince1970: TimeInterval(Int64(time) + (offsetFromUnix ?? defaultOffset)))
 }
 
-func convertToString(date: Date, offsetFromUnix: Int64 = Int64(-62135596800), base64Encoded: Bool = true) throws-> String {
-    var timeInMilliseconds: Int64 = (Int64(date.timeIntervalSince1970) - offsetFromUnix).littleEndian
+func convertToString(date: Date, offsetFromUnix: Int64? = nil, base64Encoded: Bool = true) throws-> String {
+    let defaultOffset = Int64(-62135596800)
+    var timeInMilliseconds: Int64 = (Int64(date.timeIntervalSince1970) - (offsetFromUnix ?? defaultOffset)).littleEndian
     var timeAsData = Data(bytes: &timeInMilliseconds, count: MemoryLayout<Int64>.size)
     var finalString: String = ""
     if (base64Encoded) {

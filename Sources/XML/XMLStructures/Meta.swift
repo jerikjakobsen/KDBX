@@ -9,37 +9,34 @@ import Foundation
 import SWXMLHash
 import StreamCiphers
 
+@available(iOS 13.0, *)
+@available(macOS 10.15, *)
+@available(macOS 13.0, *)
 public struct Meta: XMLObjectDeserialization, Serializable {
     let generator: XMLString?
     let databaseName: XMLString?
     let databaseDescription: XMLString?
-    let memoryProtection: FieldProtection?
-    let customData: CustomData?
+    //let memoryProtection: FieldProtection?
+    let times: Times?
+    //let customData: CustomData?
     let color: Color?
-    let Name: String = "String"
+    
+    public static func new(generator: String, databaseName: String, databaseDescription: String, color: Color) -> Meta {
+        let generatorXMLString = XMLString(content: generator, name: "Generator")
+        let databaseNameXMLString = XMLString(content: databaseName, name: "DatabaseName")
+        let databaseDescriptionXMLString = XMLString(content: databaseDescription, name: "DatabaseDescription")
+        let times = Times.now(expires: false, expiryTime: nil)
+        
+        return Meta(generator: generatorXMLString, databaseName: databaseNameXMLString, databaseDescription: databaseDescriptionXMLString, times: times, color: color)
+    }
     
     public static func deserialize(_ element: XMLIndexer) throws -> Meta {
         return Meta(
             generator: try? element["Generator"].value(),
             databaseName: try element["DatabaseName"].value(),
             databaseDescription: try? element["DatabaseDescription"].value(),
-            memoryProtection: try? element["MemoryProtection"].value(),
-            customData: try? element["CustomData"].value(),
+            times: try? element["Times"].value(),
             color: try? element["Color"].value())
-    }
-    
-    private func XMLizeString(s: String?, title: String) -> String {
-        guard let sNotNil = s else {
-            return "".XMLize(title: title)
-        }
-        return sNotNil.XMLize(title: title)
-    }
-    
-    private func XMLizeObject(title: String, obj: Serializable?) -> String {
-        guard let objNotNil = obj else {
-            return "".XMLize(title: title)
-        }
-        return objNotNil.serialize(base64Encoded: false, streamCipher: nil)
     }
     
     func serialize(base64Encoded: Bool, streamCipher: StreamCipher?) throws -> String {
@@ -49,8 +46,7 @@ public struct Meta: XMLObjectDeserialization, Serializable {
         \(databaseName?.serialize() ?? "")
         \(databaseDescription?.serialize() ?? "")
         \(color?.serialize() ?? "")
-        \(memoryProtection?.serialize() ?? "")
-        \(customData?.serialize() ?? "")
+        \(times?.serialize() ?? "")
     </Meta>
 """
     }
