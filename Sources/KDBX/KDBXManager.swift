@@ -14,7 +14,7 @@ class KDBXManager {
     
     let header: KDBXHeader
     let body: KDBXBody
-    let entries: [Entry]
+    let XMLParser: XMLManager
 
     init(password: String, fileURL: URL) throws {
         guard let stream = InputStream(url: fileURL) else {
@@ -30,15 +30,6 @@ class KDBXManager {
         guard let streamKey = self.body.streamKey else {
             throw KDBXManagerError.StreamKeyNil
         }
-        let xmlParser = try XMLManager(XMLData: xmlData, cipherKey: streamKey)
-        self.entries = xmlParser.entries
-    }
-    
-    func addEntry(entry: Entry) {
-        
-    }
-    
-    func getEntries() -> [Entry] {
-        return self.entries
+        self.XMLParser = try XMLManager(XMLData: xmlData, cipherKey: streamKey)
     }
 }
