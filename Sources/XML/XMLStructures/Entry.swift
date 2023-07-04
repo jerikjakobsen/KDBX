@@ -40,4 +40,24 @@ public struct Entry: Serializable, XMLObjectDeserialization {
 </Entry>
 """
     }
+    
+    public func getEntryName() -> String? {
+        let titleKeyVal = self.KeyVals?.filter({ kv in
+            return kv.key.content == "Title"
+        })
+        if titleKeyVal == nil || titleKeyVal?.count == 0 {
+            return ""
+        }
+        return titleKeyVal?[0].value.content
+    }
+    
+    public func addKeyVal(keyVal: KeyVal) -> Entry {
+        return Entry(KeyVals: (self.KeyVals ?? []) + [keyVal], UUID: self.UUID, iconID: self.iconID, times: self.times?.modify(newLastModificationTime: Date.now, newLastAccessTime: Date.now))
+    }
+    
+    public func removeKeyVal(key: String) -> Entry {
+        return Entry(KeyVals: (self.KeyVals ?? []).filter({ kv in
+            return kv.key.content != key
+        }), UUID: self.UUID, iconID: self.iconID, times: self.times?.modify(newLastModificationTime: Date.now, newLastAccessTime: Date.now))
+    }
 }
