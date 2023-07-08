@@ -15,13 +15,22 @@ enum DateError: Error {
 @available(iOS 13.0, *)
 @available(macOS 10.15, *)
 @available(macOS 13.0, *)
-public struct Times: XMLObjectDeserialization, Serializable {
-    let lastModificationTime: Date?
+public final class Times: XMLObjectDeserialization, Serializable {
+    var lastModificationTime: Date?
     let creationTime: Date?
-    let lastAccessedTime: Date?
-    let expires: Bool?
-    let expiryTime: Date?
-    let timeOffset: Int64?
+    var lastAccessedTime: Date?
+    var expires: Bool?
+    var expiryTime: Date?
+    var timeOffset: Int64?
+    
+    init(lastModificationTime: Date? = nil, creationTime: Date? = nil, lastAccessedTime: Date? = nil, expires: Bool? = nil, expiryTime: Date? = nil, timeOffset: Int64? = nil) {
+        self.lastModificationTime = lastModificationTime
+        self.creationTime = creationTime
+        self.lastAccessedTime = lastAccessedTime
+        self.expires = expires
+        self.expiryTime = expiryTime
+        self.timeOffset = timeOffset
+    }
     
     public static func deserialize(_ element: XMLIndexer) throws -> Times {
         // Assumes time offset is from 1/1/01 12:00 AM GMT (if timeOffset is not available)
@@ -60,20 +69,11 @@ public struct Times: XMLObjectDeserialization, Serializable {
 """
     }
     
-    public func modify(newLastModificationTime: Date? = nil, newLastAccessTime: Date? = nil, newExpiryTime: Date? = nil, newExpires: Bool? = nil, newTimeOffset: Int64? = nil) -> Times {
-        if (newLastAccessTime == nil && newLastModificationTime == nil && newExpires == nil && newExpiryTime == nil && newTimeOffset == nil) {
-            return self
+    public func update(modified: Bool, date: Date? = nil) {
+        if (modified) {
+            self.lastModificationTime = date ?? Date.now
         }
-        return Times(lastModificationTime: newLastModificationTime ?? self.lastModificationTime,
-                     creationTime: self.creationTime,
-                     lastAccessedTime: newLastAccessTime ?? self.lastAccessedTime,
-                     expires: newExpires ?? self.expires,
-                     expiryTime: newExpiryTime ?? self.expiryTime,
-                     timeOffset: newTimeOffset ?? self.timeOffset)
-    }
-    
-    public func update(modified: Bool) -> Times {
-        return self.modify(newLastModificationTime: modified ? Date.now : nil, newLastAccessTime: Date.now)
+        self.lastAccessedTime = date ?? Date.now
     }
     
     public static func now(expires: Bool, expiryTime: Date? = nil) -> Times {

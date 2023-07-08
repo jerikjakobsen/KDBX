@@ -18,21 +18,37 @@ enum KeyValError: Error {
     case DataToStringNil
 }
 
-public struct KeyVal: XMLObjectDeserialization, Serializable {
-    let key: XMLString
-    let value: XMLString
+@available(iOS 13.0, *)
+@available(macOS 10.15, *)
+@available(macOS 13.0, *)
+public final class KeyVal: NSObject, XMLObjectDeserialization, Serializable, ModifyListener {
+    var key: XMLString
+    var value: XMLString
     public let name: String
+    internal var modifyListener: ModifyListener? = nil
     
-    public static func new(key: String, value: String, protected: Bool) -> KeyVal {
-        let keyXMLString = XMLString(content: key, name: "Key", properties: nil)
-        let valueXMLString = XMLString(content: value, name: "Value", properties: protected ? ["Protected": "True"] : nil)
-        return KeyVal(key: keyXMLString, value: valueXMLString, name: "String")
+    public init(key: String, value: String, name: String = "String", protected: Bool = false) {
+        self.key = XMLString(content: key, name: "Key")
+        self.value = XMLString(content: value, name: "Value", properties: protected ? ["Protected": "True"] : nil)
+        self.name = name
+        super.init()
+        self.key.modifyListener = self
+        self.value.modifyListener = self
+    }
+    
+    public init(key: XMLString, value: XMLString, name: String) {
+        self.key = key
+        self.value = value
+        self.name = name
+        super.init()
+        self.key.modifyListener = self
+        self.value.modifyListener = self
     }
     
     public static func deserialize(_ element: XMLIndexer) throws -> KeyVal {
-        return try KeyVal(
-            key: element["Key"].value(),
-            value: element["Value"].value(),
+        return KeyVal(
+            key: try element["Key"].value(),
+            value: try element["Value"].value(),
             name: element.element?.name ?? "String")
     }
     
@@ -48,7 +64,7 @@ public struct KeyVal: XMLObjectDeserialization, Serializable {
         guard let valElement = element["Value"].element else {
             throw KeyValError.UnableToGetValue
         }
-        let key: XMLString = try XMLString.deserialize(keyElement, streamCipher: streamCipher)
+        let key: XMLString = try XMLString.deserialize(keyElement)
         
         let val: XMLString = try XMLString.deserialize(valElement, base64Encoded: isBase64Encoded(key: key.content), streamCipher: streamCipher)
         
@@ -69,10 +85,16 @@ public struct KeyVal: XMLObjectDeserialization, Serializable {
             """
     }
     
-    public func modify(newKey: String? = nil, newValue: String? = nil ) -> KeyVal {
-        if (newKey == nil && newValue == nil) {
-            return self
-        }
-        return KeyVal(key: self.key.modify(content: newKey), value: self.value.modify(content: newValue), name: self.name)
+    func didModify(date: Date) {
+        self.modifyListener?.didModify(date: date)
+    }
+}
+
+@available(iOS 13.0, *)
+@available(macOS 10.15, *)
+@available(macOS 13.0, *)
+extension KeyVal: Equatable {
+    public static func == (lhs: KeyVal, rhs: KeyVal) -> Bool {
+        return lhs.key == rhs.key && lhs.value == rhs.value && lhs.name == rhs.name
     }
 }

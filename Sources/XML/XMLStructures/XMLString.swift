@@ -17,18 +17,36 @@ enum XMLStringError: Error {
     
 }
 
-struct XMLString: XMLValueDeserialization, Serializable {
-    public let content: String
-    public let name: String
+@available(iOS 13.0, *)
+@available(macOS 10.15, *)
+@available(macOS 13.0, *)
+public final class XMLString: XMLValueDeserialization, Serializable {
+    public var content: String {
+        didSet {
+            self.modifyListener?.didModify(date: Date.now)
+        }
+    }
+    public var name: String {
+        didSet {
+            self.modifyListener?.didModify(date: Date.now)
+        }
+    }
     public var properties: [String: String]? = nil
+    internal var modifyListener: ModifyListener?
     
-    static func deserialize(_ element: SWXMLHash.XMLElement) throws -> XMLString {
+    public init(content: String, name: String, properties: [String : String]? = nil) {
+        self.content = content
+        self.name = name
+        self.properties = properties
+    }
+    
+    public static func deserialize(_ element: SWXMLHash.XMLElement) throws -> XMLString {
         let attributes = element.allAttributes.mapValues { attr in
             return attr.text
         }
         return XMLString(content: element.text, name: element.name, properties: attributes)
     }
-    static func deserialize(_ attribute: SWXMLHash.XMLAttribute) throws -> XMLString {
+    public static func deserialize(_ attribute: SWXMLHash.XMLAttribute) throws -> XMLString {
         return XMLString(content: attribute.text, name: attribute.name, properties: nil)
     }
     static func deserialize(_ element: SWXMLHash.XMLElement, base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) throws -> XMLString {
@@ -91,11 +109,13 @@ struct XMLString: XMLValueDeserialization, Serializable {
             <\(name)\(propertiesXMLize())>\(valString)</\(name)>
             """
     }
-    
-    public func modify(content: String? = nil, name: String? = nil, properties: [String: String]? = nil) -> XMLString {
-        if (content == nil && name == nil && properties == nil) {
-            return self
-        }
-        return XMLString(content: content ?? self.content, name: name ?? self.name, properties: properties ?? self.properties)
+}
+
+@available(iOS 13.0, *)
+@available(macOS 10.15, *)
+@available(macOS 13.0, *)
+extension XMLString: Equatable {
+    public static func == (lhs: XMLString, rhs: XMLString) -> Bool {
+        return lhs.content == rhs.content && lhs.name == rhs.name && lhs.properties == rhs.properties
     }
 }

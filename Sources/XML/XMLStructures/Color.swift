@@ -9,11 +9,38 @@ import Foundation
 import SWXMLHash
 import StreamCiphers
 
-public struct Color: XMLObjectDeserialization {
-    let red: Float
-    let green: Float
-    let blue: Float
-    let alpha: Float
+@available(iOS 13.0, *)
+@available(macOS 10.15, *)
+@available(macOS 13.0, *)
+public final class Color: NSObject, XMLObjectDeserialization, Serializable {
+    var red: Float {
+        didSet {
+            self.modifyListener?.didModify(date: Date.now)
+        }
+    }
+    var green: Float {
+        didSet {
+            self.modifyListener?.didModify(date: Date.now)
+        }
+    }
+    var blue: Float {
+        didSet {
+            self.modifyListener?.didModify(date: Date.now)
+        }
+    }
+    var alpha: Float {
+        didSet {
+            self.modifyListener?.didModify(date: Date.now)
+        }
+    }
+    internal var modifyListener: ModifyListener? = nil
+    
+    public init(red: Float, green: Float, blue: Float, alpha: Float) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+        self.alpha = alpha
+    }
     
     public static func deserialize(_ element: XMLIndexer) throws -> Color {
         return try Color(
@@ -22,16 +49,6 @@ public struct Color: XMLObjectDeserialization {
             blue: element["Blue"].value(),
             alpha: element["Alpha"].value())
     }
-    
-    public func modify(red: Float? = nil, green: Float? = nil, blue: Float? = nil, alpha: Float? = nil) -> Color {
-        return Color(red: red ?? self.red,
-                     green: green ?? self.green,
-                     blue: blue ?? self.blue,
-                     alpha: alpha ?? self.alpha)
-    }
-}
-
-extension Color: Serializable {
     public func serialize() -> String {
         return """
 <Color>
@@ -41,5 +58,17 @@ extension Color: Serializable {
     <Alpha>\(alpha)</Alpha>
 </Color>
 """
+    }
+}
+
+@available(iOS 13.0, *)
+@available(macOS 10.15, *)
+@available(macOS 13.0, *)
+extension Color: Equatable {
+    public static func == (lhs: Color, rhs: Color) -> Bool {
+        return (lhs.red == rhs.red &&
+        lhs.green == rhs.green &&
+        lhs.blue == rhs.blue &&
+        lhs.alpha == rhs.alpha)
     }
 }
