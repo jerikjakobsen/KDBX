@@ -24,7 +24,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
     public var name: XMLString?
     internal var modifyListener: ModifyListener?
     
-    public init(KeyVals: [KeyVal], UUID: XMLString?, iconID: XMLString?, times: Times?, entryName: XMLString?) {
+    internal init(KeyVals: [KeyVal], UUID: XMLString?, iconID: XMLString?, times: Times?, entryName: XMLString?) {
         self.KeyVals = KeyVals
         self.UUID = UUID
         self.iconID = iconID

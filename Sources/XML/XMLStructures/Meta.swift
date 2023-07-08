@@ -24,7 +24,7 @@ public final class Meta: NSObject, XMLObjectDeserialization, Serializable, Modif
         }
     }
     
-    public init(generator: XMLString?, databaseName: XMLString?, databaseDescription: XMLString?, times: Times?, color: Color?) {
+    internal init(generator: XMLString?, databaseName: XMLString?, databaseDescription: XMLString?, times: Times?, color: Color?) {
         self.generator = generator
         self.databaseName = databaseName
         self.databaseDescription = databaseDescription

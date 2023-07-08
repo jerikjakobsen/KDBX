@@ -32,7 +32,7 @@ public final class Group: XMLObjectDeserialization, Serializable {
     private var entries: [Entry]
     internal var modifyListener: ModifyListener?
     
-    public init(UUID: XMLString?, name: XMLString?, iconID: XMLString?, times: Times?, entries: [Entry] = []) {
+    internal init(UUID: XMLString?, name: XMLString?, iconID: XMLString?, times: Times?, entries: [Entry] = []) {
         self.UUID = UUID
         self.name = name
         self.iconID = iconID

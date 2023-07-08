@@ -36,7 +36,7 @@ public final class KeyVal: NSObject, XMLObjectDeserialization, Serializable, Mod
         self.value.modifyListener = self
     }
     
-    public init(key: XMLString, value: XMLString, name: String) {
+    internal init(key: XMLString, value: XMLString, name: String) {
         self.key = key
         self.value = value
         self.name = name
