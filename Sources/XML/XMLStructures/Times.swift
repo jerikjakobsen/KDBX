@@ -13,7 +13,6 @@ enum DateError: Error {
     case DateDecoding
 }
 @available(iOS 13.0, *)
-@available(macOS 10.15, *)
 @available(macOS 13.0, *)
 public final class Times: XMLObjectDeserialization, Serializable {
     var lastModificationTime: Date?
@@ -57,13 +56,34 @@ public final class Times: XMLObjectDeserialization, Serializable {
     }
     
     public func serialize(base64Encoded: Bool = true, streamCipher: StreamCipher? = nil) throws -> String {
+        
+        var lmtString = ""
+        if let lmt = lastModificationTime {
+            lmtString = try convertToString(date: lmt)
+        }
+        
+        var ctString = ""
+        if let ct = lastModificationTime {
+            ctString = try convertToString(date: ct)
+        }
+        
+        var latString = ""
+        if let lat = lastModificationTime {
+            latString = try convertToString(date: lat)
+        }
+        
+        var etString = ""
+        if let et = lastModificationTime {
+            etString = try convertToString(date: et)
+        }
+        
         return try """
 <Times>
     \(timeOffset != nil ? XMLString(content: String(timeOffset!), name: "TimeOffset").serialize() : "")
-    <LastModificationTime>\(convertToString(date: lastModificationTime!))</LastModificationTime>
-    <CreationTime>\(convertToString(date: creationTime!))</CreationTime>
-    <LastAccessTime>\(convertToString(date: lastAccessedTime!))</LastAccessTime>
-    <ExpiryTime>\(convertToString(date: expiryTime!))</ExpiryTime>
+    <LastModificationTime>\(lmtString)</LastModificationTime>
+    <CreationTime>\(ctString)</CreationTime>
+    <LastAccessTime>\(latString)</LastAccessTime>
+    <ExpiryTime>\(etString)</ExpiryTime>
     <Expires>\(expires ?? false ? "True" : "False")</Expires>
 </Times>
 """

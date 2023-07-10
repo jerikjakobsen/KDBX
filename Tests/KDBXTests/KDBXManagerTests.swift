@@ -10,7 +10,6 @@ import XML
 @testable import KDBX
 
 @available(iOS 13.0, *)
-@available(macOS 10.15, *)
 @available(macOS 13.0, *)
 final class KDBXManagerTests: XCTestCase {
     
@@ -28,8 +27,20 @@ final class KDBXManagerTests: XCTestCase {
         XCTAssertEqual(fileManager.contents(atPath: passwordsDecryptedFileString!), decryptedXMLData)
     }
     
-    func testManagerEntries() throws {
-        let manager = try helperCreateManager()
+    func testManagerDecoding() throws {
+        let mockManager = try helperCreateMockManager().xmlManager
+        let managerFromDecryption = try helperCreateManager().xmlManager
+        
+        XCTAssertTrue(mockManager.equalContents(managerFromDecryption))
+    }
+    
+    func testManagerDecodeEncode() throws {
+        let managerFromDecryption = try helperCreateManager()
+        let chachastream = managerFromDecryption.xmlManager.chachaStream
+        let xmlString = try managerFromDecryption.xmlManager.toXML()
+        chachastream?.reset()
+        let copyXMLManager = try XMLManager(xmlString: xmlString, chachaStream: chachastream!)
+        XCTAssertTrue(copyXMLManager.equalContents(managerFromDecryption.xmlManager))
         
     }
     
@@ -47,10 +58,35 @@ final class KDBXManagerTests: XCTestCase {
     }
     
     func helperCreateMockManager() throws -> KDBXManager {
-        let mockManager = KDBXManager()
+        let mockManager = KDBXManager(generator: "KeePassXC")
         mockManager.setDBName(name: "Test")
         mockManager.setDBDescription(description: "")
+        let entry1 = Entry(name: "Testing")
+        let keyVals1 = [
+            KeyVal(key: "Notes", value: ""),
+            KeyVal(key: "Password", value: "testing", protected: true),
+            KeyVal(key: "URL", value: ""),
+            KeyVal(key: "UserName", value: "John"),
+        ]
+        for kv in keyVals1 {
+            entry1.addKeyVal(keyVal: kv)
+        }
+        mockManager.addEntry(entry: entry1)
         
+        let entry2 = Entry(name: "Testing2")
+        let keyVals2 = [
+            KeyVal(key: "Notes", value: ""),
+            KeyVal(key: "Password", value: "testing2", protected: true),
+            KeyVal(key: "URL", value: ""),
+            KeyVal(key: "UserName", value: "john"),
+        ]
+        for kv in keyVals2 {
+            entry2.addKeyVal(keyVal: kv)
+        }
+        mockManager.addEntry(entry: entry2)
+        mockManager.xmlManager.group?.setIconID(iconID: "48")
+        
+        return mockManager
     }
     
 }

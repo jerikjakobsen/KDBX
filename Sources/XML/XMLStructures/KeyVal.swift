@@ -19,7 +19,6 @@ enum KeyValError: Error {
 }
 
 @available(iOS 13.0, *)
-@available(macOS 10.15, *)
 @available(macOS 13.0, *)
 public final class KeyVal: NSObject, XMLObjectDeserialization, Serializable, ModifyListener {
     var key: XMLString
@@ -29,7 +28,7 @@ public final class KeyVal: NSObject, XMLObjectDeserialization, Serializable, Mod
     
     public init(key: String, value: String, name: String = "String", protected: Bool = false) {
         self.key = XMLString(content: key, name: "Key")
-        self.value = XMLString(content: value, name: "Value", properties: protected ? ["Protected": "True"] : nil)
+        self.value = XMLString(content: value, name: "Value", properties: protected ? ["Protected": "True"] : [:])
         self.name = name
         super.init()
         self.key.modifyListener = self
@@ -88,13 +87,19 @@ public final class KeyVal: NSObject, XMLObjectDeserialization, Serializable, Mod
     func didModify(date: Date) {
         self.modifyListener?.didModify(date: date)
     }
+    
+    public func isEqual(_ object: KeyVal?) -> Bool {
+        guard let notNil = object else {
+            return false
+        }
+        return notNil.key.isEqual(key) && notNil.value.isEqual(value) && notNil.name == name
+    }
 }
 
 @available(iOS 13.0, *)
-@available(macOS 10.15, *)
 @available(macOS 13.0, *)
-extension KeyVal: Equatable {
-    public static func == (lhs: KeyVal, rhs: KeyVal) -> Bool {
-        return lhs.key == rhs.key && lhs.value == rhs.value && lhs.name == rhs.name
+extension KeyVal: CustomStringConvertible {
+    public override var description: String {
+        return "\(key): \(value)"
     }
 }

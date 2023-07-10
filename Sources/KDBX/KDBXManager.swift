@@ -1,5 +1,6 @@
 import Foundation
 import XML
+import StreamCiphers
 
 @available(iOS 13.0, *)
 @available(macOS 10.15, *)
@@ -34,8 +35,8 @@ class KDBXManager {
         self.xmlManager = try XMLManager(XMLData: xmlData, cipherKey: streamKey)
     }
     
-    init() {
-        self.xmlManager = XMLManager()
+    init(generator: String? = nil) {
+        self.xmlManager = XMLManager(generator: generator)
     }
     
     public func addEntry(entry: Entry) {

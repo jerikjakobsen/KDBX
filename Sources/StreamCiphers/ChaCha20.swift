@@ -36,6 +36,11 @@ public class ChaChaStream: StreamCipher {
         return encryptedData
     }
     
+    public func reset() {
+        encryptOffset = 0
+        decryptOffset = 0
+    }
+    
     private func padDataWithDummyBytes(data: Data, paddingLength: Int) -> Data {
         if (paddingLength <= 0) {
             return data

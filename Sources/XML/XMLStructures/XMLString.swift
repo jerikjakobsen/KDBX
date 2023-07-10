@@ -18,9 +18,9 @@ enum XMLStringError: Error {
 }
 
 @available(iOS 13.0, *)
-@available(macOS 10.15, *)
 @available(macOS 13.0, *)
-public final class XMLString: XMLValueDeserialization, Serializable {
+public final class XMLString: NSObject, XMLValueDeserialization, Serializable {
+    
     public var content: String {
         didSet {
             self.modifyListener?.didModify(date: Date.now)
@@ -31,10 +31,10 @@ public final class XMLString: XMLValueDeserialization, Serializable {
             self.modifyListener?.didModify(date: Date.now)
         }
     }
-    public var properties: [String: String]? = nil
+    public var properties: [String: String] = [:]
     internal var modifyListener: ModifyListener?
     
-    public init(content: String, name: String, properties: [String : String]? = nil) {
+    public init(content: String, name: String, properties: [String : String] = [:]) {
         self.content = content
         self.name = name
         self.properties = properties
@@ -47,7 +47,7 @@ public final class XMLString: XMLValueDeserialization, Serializable {
         return XMLString(content: element.text, name: element.name, properties: attributes)
     }
     public static func deserialize(_ attribute: SWXMLHash.XMLAttribute) throws -> XMLString {
-        return XMLString(content: attribute.text, name: attribute.name, properties: nil)
+        return XMLString(content: attribute.text, name: attribute.name, properties: [:])
     }
     static func deserialize(_ element: SWXMLHash.XMLElement, base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) throws -> XMLString {
         
@@ -79,10 +79,10 @@ public final class XMLString: XMLValueDeserialization, Serializable {
     
     private func propertiesXMLize() -> String {
 
-        guard let p = properties, !p.isEmpty else {
+        guard !properties.isEmpty else {
             return ""
         }
-        return " " + String(p.map { (key, value) in
+        return " " + String(properties.map { (key, value) in
             return "\(key)=\"\(value)\""
         }.joined(separator: " "))
     }
@@ -93,7 +93,7 @@ public final class XMLString: XMLValueDeserialization, Serializable {
             throw XMLStringError.StringToDataNil
         }
         
-        if let cipher = streamCipher, (properties?["Protected"] ?? "False") == "True" {
+        if let cipher = streamCipher, (properties["Protected"] ?? "False") == "True" {
             strData = try cipher.encrypt(data: strData)
         }
         
@@ -109,13 +109,13 @@ public final class XMLString: XMLValueDeserialization, Serializable {
             <\(name)\(propertiesXMLize())>\(valString)</\(name)>
             """
     }
-}
-
-@available(iOS 13.0, *)
-@available(macOS 10.15, *)
-@available(macOS 13.0, *)
-extension XMLString: Equatable {
-    public static func == (lhs: XMLString, rhs: XMLString) -> Bool {
-        return lhs.content == rhs.content && lhs.name == rhs.name && lhs.properties == rhs.properties
+    public func isEqual(_ object: XMLString?) -> Bool {
+        guard let notNil = object else {
+            return false
+        }
+        return notNil.content == content && notNil.name == name && notNil.properties == properties
+    }
+    public override var description: String {
+        return "<\(name)\(propertiesXMLize())>\(content)</\(name)>"
     }
 }

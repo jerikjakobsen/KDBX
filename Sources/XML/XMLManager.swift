@@ -13,12 +13,12 @@ import CryptoKit
 @available(iOS 13.0, *)
 @available(macOS 10.15, *)
 @available(macOS 13.0, *)
-public class XMLManager {
+public class XMLManager: NSObject {
     
     //public let XMLData: Data?
     public private(set) var group: Group? = nil
     public private(set) var meta: Meta? = nil
-    private let chachaStream: ChaChaStream?
+    public let chachaStream: ChaChaStream?
     
     enum ParserError: Error {
         case UnexpectedNilOnOptional
@@ -42,12 +42,20 @@ public class XMLManager {
         self.group?.modifyListener = self.meta
     }
     
-    public init(databaseName: String = "", databaseDescription: String = "") {
+    public init(databaseName: String = "", databaseDescription: String = "", generator: String? = nil) {
         // Initializer when creating a new database
         self.group = Group()
-        self.meta = Meta(generator: "Keys", databaseName: databaseName, databaseDescription: databaseDescription)
+        self.meta = Meta(generator: generator ?? "Keys", databaseName: databaseName, databaseDescription: databaseDescription)
         self.group?.modifyListener = self.meta
         self.chachaStream = nil
+    }
+    
+    public init(xmlString: String, chachaStream: ChaChaStream) throws {
+        self.chachaStream = chachaStream
+        let xmlParser = XMLHash.parse(xmlString)
+        self.meta = try xmlParser["KeePassFile"]["Meta"].value()
+        self.group = try Group.deserialize(xmlParser["KeePassFile"]["Root"]["Group"], streamCipher: chachaStream)
+        self.group?.modifyListener = self.meta
     }
     
 //    public func modifyMeta(databaseName: String? = nil, databaseDescription: String? = nil) {
@@ -62,24 +70,21 @@ public class XMLManager {
 //
 //        let chachaStream = try ChaChaStream(key: key, nonce: nonce)
         return try """
-            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-            <KeePassFile>
-                \(self.meta?.serialize(base64Encoded: true, streamCipher: self.chachaStream) ?? "")
-                <Root>
-                    \(self.group?.serialize(base64Encoded: true, streamCipher: self.chachaStream) ?? "")
-                <Root>
-            </KeePassFile>
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <KeePassFile>
+            \(self.meta?.serialize(base64Encoded: true, streamCipher: self.chachaStream) ?? "")
+            <Root>
+                \(self.group?.serialize(base64Encoded: true, streamCipher: self.chachaStream) ?? "")
+            </Root>
+        </KeePassFile>
         """
     }
     
-}
-
-@available(iOS 13.0, *)
-@available(macOS 10.15, *)
-@available(macOS 13.0, *)
-extension XMLManager: Equatable {
-    public static func == (lhs: XMLManager, rhs: XMLManager) -> Bool {
-        return (lhs.meta == rhs.meta &&
-                lhs.group == rhs.group)
+    public func equalContents(_ object: XMLManager?) -> Bool {
+        guard let notNil = object else {
+            return false
+        }
+        return self.group?.isEqual(notNil.group) ?? false && self.meta?.isEqual(notNil.meta) ?? false
     }
+    
 }

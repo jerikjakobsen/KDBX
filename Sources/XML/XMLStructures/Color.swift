@@ -10,7 +10,6 @@ import SWXMLHash
 import StreamCiphers
 
 @available(iOS 13.0, *)
-@available(macOS 10.15, *)
 @available(macOS 13.0, *)
 public final class Color: NSObject, XMLObjectDeserialization, Serializable {
     var red: Float {
@@ -59,16 +58,15 @@ public final class Color: NSObject, XMLObjectDeserialization, Serializable {
 </Color>
 """
     }
-}
-
-@available(iOS 13.0, *)
-@available(macOS 10.15, *)
-@available(macOS 13.0, *)
-extension Color: Equatable {
-    public static func == (lhs: Color, rhs: Color) -> Bool {
-        return (lhs.red == rhs.red &&
-        lhs.green == rhs.green &&
-        lhs.blue == rhs.blue &&
-        lhs.alpha == rhs.alpha)
+    
+    public func isEqual(_ object: Color?) -> Bool {
+        guard let notNil = object else {
+            return false
+        }
+        
+        return (notNil.red == red &&
+                notNil.green == green &&
+                notNil.blue == blue &&
+                notNil.alpha == alpha)
     }
 }

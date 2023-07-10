@@ -14,36 +14,32 @@ enum EntryError: Error {
 }
 
 @available(iOS 13.0, *)
-@available(macOS 10.15, *)
 @available(macOS 13.0, *)
 public final class Entry: NSObject, Serializable, XMLObjectDeserialization, ModifyListener {
-    private var KeyVals: [KeyVal]
-    public let UUID: XMLString?
-    var iconID: XMLString?
-    private var times: Times?
-    public var name: XMLString?
+    public var KeyVals: [KeyVal]
+    public let UUID: XMLString
+    var iconID: XMLString
+    private var times: Times
+    public var name: XMLString
     internal var modifyListener: ModifyListener?
     
-    internal init(KeyVals: [KeyVal], UUID: XMLString?, iconID: XMLString?, times: Times?, entryName: XMLString?) {
+    internal init(KeyVals: [KeyVal], UUID: XMLString, iconID: XMLString, times: Times, name: XMLString) {
         self.KeyVals = KeyVals
         self.UUID = UUID
         self.iconID = iconID
         self.times = times
-        self.name = entryName
+        self.name = name
         super.init()
-        self.name?.modifyListener = self
-        self.iconID?.modifyListener = self
+        self.name.modifyListener = self
+        self.iconID.modifyListener = self
         for kv in self.KeyVals {
             kv.modifyListener = self
         }
     }
     
-    public init(iconID: String? = nil, keyVals: [KeyVal] = [], expires: Bool = false, expiryTime: Date? = nil, name: String) {
+    public init(iconID: String = "0", keyVals: [KeyVal] = [], expires: Bool = false, expiryTime: Date? = nil, name: String) {
         let uuidXMLString = XMLString(content: Foundation.UUID().uuidString, name: "UUID")
-        var iconIDXMLString: XMLString? = nil
-        if let icID = iconID {
-            iconIDXMLString = XMLString(content: icID, name: "String")
-        }
+        var iconIDXMLString: XMLString = XMLString(content: iconID, name: "IconID")
         let entryNameXMLString = XMLString(content: name, name: "EntryName")
         
         self.KeyVals = keyVals
@@ -52,8 +48,8 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
         self.times = Times.now(expires: expires, expiryTime: expiryTime)
         self.name = entryNameXMLString
         super.init()
-        self.name?.modifyListener = self
-        self.iconID?.modifyListener = self
+        self.name.modifyListener = self
+        self.iconID.modifyListener = self
         for kv in self.KeyVals {
             kv.modifyListener = self
         }
@@ -79,6 +75,10 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
             entryNameXMLString = XMLString(content: name, name: "EntryName")
         }
         
+        guard let entryName = entryNameXMLString else {
+            throw EntryError.NoTitleFound
+        }
+        
         var times: Times = try element["Times"].value()
         times.update(modified: false)
         
@@ -86,7 +86,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
                          UUID: element["UUID"].value(),
                          iconID: element["IconID"].value(),
                          times: times,
-                         entryName: entryNameXMLString)
+                         name: entryName)
     }
     public static func deserialize(_ element: XMLIndexer, streamCipher: StreamCipher? = nil) throws -> Entry {
         var keyVals: [KeyVal] = try element["String"].all.map { keyval in
@@ -110,6 +110,10 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
             entryNameXMLString = XMLString(content: name, name: "EntryName")
         }
         
+        guard let entryName = entryNameXMLString else {
+            throw EntryError.NoTitleFound
+        }
+        
         var times: Times = try element["Times"].value()
         times.update(modified: false)
         
@@ -117,21 +121,21 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
                          UUID: element["UUID"].value(),
                          iconID: element["IconID"].value(),
                          times: times,
-                         entryName: entryNameXMLString)
+                         name: entryName)
     }
     
     public func serialize(base64Encoded: Bool, streamCipher: StreamCipher?) throws -> String {
-        let keyvalsString = try? KeyVals.map({ kv in
+        let keyvalsString = try KeyVals.map({ kv in
             return try kv.serialize(streamCipher: streamCipher)
         }).joined(separator: "\n")
         return try """
-            <Entry>
-                \(UUID?.serialize() ?? "")
-                \(name?.serialize() ?? "")
-                \(iconID?.serialize() ?? "")
-                \(times?.serialize() ?? "")
-                \(keyvalsString ?? "")
-            </Entry>
+                <Entry>
+                \(UUID.serialize())
+                \(name.serialize())
+                \(iconID.serialize())
+                \(times.serialize())
+                \(keyvalsString)
+                </Entry>
             """
     }
     
@@ -139,7 +143,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
         keyVal.modifyListener = self
         self.KeyVals.append(keyVal)
         let updateDate: Date = Date.now
-        self.times?.update(modified: true, date: updateDate)
+        self.times.update(modified: true, date: updateDate)
         self.modifyListener?.didModify(date: updateDate)
     }
     
@@ -148,7 +152,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
             return kv.key.content != key
         }
         let updateDate: Date = Date.now
-        self.times?.update(modified: true, date: updateDate)
+        self.times.update(modified: true, date: updateDate)
         self.modifyListener?.didModify(date: updateDate)
     }
     
@@ -157,30 +161,51 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
     }
     
     func setName(name: String) {
-        self.name?.content = name
+        self.name.content = name
     }
     
-    func getName() -> String? {
-        return self.name?.content
+    func getName() -> String {
+        return self.name.content
     }
     
     func setIconID(iconID: String) {
-        self.iconID?.content = iconID
+        self.iconID.content = iconID
     }
     
-    func getIconID() -> String? {
-        return self.iconID?.content
+    func getIconID() -> String {
+        return self.iconID.content
+    }
+    
+    public func isEqual(_ object: Entry?) -> Bool {
+        guard let notNil = object else {
+            return false
+        }
+        var keyValsEq = true
+        for kv in KeyVals {
+            var found = false
+            for kv2 in notNil.KeyVals {
+                if kv.isEqual(kv2) {
+                    found = true
+                    break
+                }
+            }
+            if !found {
+                keyValsEq = false
+                break
+            }
+        }
+        keyValsEq = keyValsEq && notNil.KeyVals.count == KeyVals.count
+        return (keyValsEq &&
+                notNil.iconID.isEqual(iconID) &&
+                notNil.name.isEqual(name))
+    }
+    
+    public override var description: String {
+        let keyValsStr = KeyVals.map { kv in
+            return kv.description
+        }.joined(separator: "\n")
+        return "KeyVals: [\(keyValsStr)]\niconID: \(iconID)\nname: \(name)\n"
     }
 }
 
-@available(iOS 13.0, *)
-@available(macOS 10.15, *)
-@available(macOS 13.0, *)
-extension Entry: Equatable {
-    public static func == (lhs: Entry, rhs: Entry) -> Bool {
-        return (lhs.KeyVals == rhs.keyVals &&
-        lhs.iconID == rhs.iconID &&
-        lhs.name == rhs.name)
-    }
-}
 
