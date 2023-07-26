@@ -16,8 +16,8 @@ import CryptoKit
 public class XMLManager: NSObject {
     
     //public let XMLData: Data?
-    public private(set) var group: Group? = nil
-    public private(set) var meta: Meta? = nil
+    public private(set) var group: GroupXML? = nil
+    public private(set) var meta: MetaXML? = nil
     public var chachaStream: ChaChaStream?
     
     enum ParserError: Error {
@@ -38,14 +38,14 @@ public class XMLManager: NSObject {
         }
         let xmlParser = XMLHash.parse(xmlString)
         self.meta = try xmlParser["KeePassFile"]["Meta"].value()
-        self.group = try Group.deserialize(xmlParser["KeePassFile"]["Root"]["Group"], streamCipher: chachaStream)
+        self.group = try GroupXML.deserialize(xmlParser["KeePassFile"]["Root"]["Group"], streamCipher: chachaStream)
         self.group?.modifyListener = self.meta
     }
     
     public init(databaseName: String = "", databaseDescription: String = "", generator: String? = nil) {
         // Initializer when creating a new database
-        self.group = Group()
-        self.meta = Meta(generator: generator ?? "Keys", databaseName: databaseName, databaseDescription: databaseDescription)
+        self.group = GroupXML()
+        self.meta = MetaXML(generator: generator ?? "Keys", databaseName: databaseName, databaseDescription: databaseDescription)
         self.group?.modifyListener = self.meta
         self.chachaStream = nil
     }
@@ -54,7 +54,7 @@ public class XMLManager: NSObject {
         self.chachaStream = chachaStream
         let xmlParser = XMLHash.parse(xmlString)
         self.meta = try xmlParser["KeePassFile"]["Meta"].value()
-        self.group = try Group.deserialize(xmlParser["KeePassFile"]["Root"]["Group"], streamCipher: chachaStream)
+        self.group = try GroupXML.deserialize(xmlParser["KeePassFile"]["Root"]["Group"], streamCipher: chachaStream)
         self.group?.modifyListener = self.meta
     }
     

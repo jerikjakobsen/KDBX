@@ -14,7 +14,7 @@ enum DateError: Error {
 }
 @available(iOS 13.0, *)
 @available(macOS 13.0, *)
-public final class Times: XMLObjectDeserialization, Serializable {
+public final class TimesXML: XMLObjectDeserialization, Serializable {
     var lastModificationTime: Date?
     let creationTime: Date?
     var lastAccessedTime: Date?
@@ -31,7 +31,7 @@ public final class Times: XMLObjectDeserialization, Serializable {
         self.timeOffset = timeOffset
     }
     
-    public static func deserialize(_ element: XMLIndexer) throws -> Times {
+    public static func deserialize(_ element: XMLIndexer) throws -> TimesXML {
         // Assumes time offset is from 1/1/01 12:00 AM GMT (if timeOffset is not available)
         let lmtStr: String = try element["LastModificationTime"].value()
         let ctStr: String = try element["CreationTime"].value()
@@ -45,7 +45,7 @@ public final class Times: XMLObjectDeserialization, Serializable {
             timeOffsetInt64 = Int64(-62135596800)
         }
         
-        return try Times(
+        return try TimesXML(
             lastModificationTime: convertToDate(s: lmtStr, offsetFromUnix: timeOffsetInt64),
             creationTime: convertToDate(s: ctStr, offsetFromUnix: timeOffsetInt64),
             lastAccessedTime: Date.now,
@@ -96,7 +96,7 @@ public final class Times: XMLObjectDeserialization, Serializable {
         self.lastAccessedTime = date ?? Date.now
     }
     
-    public static func now(expires: Bool, expiryTime: Date? = nil) -> Times {
-        return Times(lastModificationTime: Date.now, creationTime: Date.now, lastAccessedTime: Date.now, expires: expires, expiryTime: expiryTime, timeOffset: 0)
+    public static func now(expires: Bool, expiryTime: Date? = nil) -> TimesXML {
+        return TimesXML(lastModificationTime: Date.now, creationTime: Date.now, lastAccessedTime: Date.now, expires: expires, expiryTime: expiryTime, timeOffset: 0)
     }
 }

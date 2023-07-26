@@ -11,7 +11,7 @@ import StreamCiphers
 
 @available(iOS 13.0, *)
 @available(macOS 13.0, *)
-public final class Color: NSObject, XMLObjectDeserialization, Serializable {
+public final class ColorXML: NSObject, XMLObjectDeserialization, Serializable {
     var red: Float {
         didSet {
             self.modifyListener?.didModify(date: Date.now)
@@ -41,8 +41,8 @@ public final class Color: NSObject, XMLObjectDeserialization, Serializable {
         self.alpha = alpha
     }
     
-    public static func deserialize(_ element: XMLIndexer) throws -> Color {
-        return try Color(
+    public static func deserialize(_ element: XMLIndexer) throws -> ColorXML {
+        return try ColorXML(
             red: element["Red"].value(),
             green: element["Green"].value(),
             blue: element["Blue"].value(),
@@ -59,7 +59,7 @@ public final class Color: NSObject, XMLObjectDeserialization, Serializable {
 """
     }
     
-    public func isEqual(_ object: Color?) -> Bool {
+    public func isEqual(_ object: ColorXML?) -> Bool {
         guard let notNil = object else {
             return false
         }

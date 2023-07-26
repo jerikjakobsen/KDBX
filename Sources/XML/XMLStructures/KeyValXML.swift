@@ -20,7 +20,7 @@ enum KeyValError: Error {
 
 @available(iOS 13.0, *)
 @available(macOS 13.0, *)
-public final class KeyVal: NSObject, XMLObjectDeserialization, Serializable, ModifyListener {
+public final class KeyValXML: NSObject, XMLObjectDeserialization, Serializable, ModifyListener {
     var key: XMLString
     var value: XMLString
     public let name: String
@@ -44,8 +44,8 @@ public final class KeyVal: NSObject, XMLObjectDeserialization, Serializable, Mod
         self.value.modifyListener = self
     }
     
-    public static func deserialize(_ element: XMLIndexer) throws -> KeyVal {
-        return KeyVal(
+    public static func deserialize(_ element: XMLIndexer) throws -> KeyValXML {
+        return KeyValXML(
             key: try element["Key"].value(),
             value: try element["Value"].value(),
             name: element.element?.name ?? "String")
@@ -55,7 +55,7 @@ public final class KeyVal: NSObject, XMLObjectDeserialization, Serializable, Mod
         return key == "Password" || key.contains("Time")
     }
     
-    public static func deserialize(_ element: XMLIndexer, streamCipher: StreamCipher? = nil) throws -> KeyVal {
+    public static func deserialize(_ element: XMLIndexer, streamCipher: StreamCipher? = nil) throws -> KeyValXML {
         guard let keyElement = element["Key"].element else {
             throw KeyValError.UnableToGetKey
         }
@@ -67,14 +67,14 @@ public final class KeyVal: NSObject, XMLObjectDeserialization, Serializable, Mod
         
         let val: XMLString = try XMLString.deserialize(valElement, base64Encoded: isBase64Encoded(key: key.content), streamCipher: streamCipher)
         
-        return KeyVal(
+        return KeyValXML(
             key: key,
             value: val,
             name: element.element?.name ?? "String")
     }
     
     public func serialize(base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) throws -> String {
-        let b64encoded = base64Encoded || KeyVal.isBase64Encoded(key: key.content)
+        let b64encoded = base64Encoded || KeyValXML.isBase64Encoded(key: key.content)
         
         return try """
             <\(name)>
@@ -88,7 +88,7 @@ public final class KeyVal: NSObject, XMLObjectDeserialization, Serializable, Mod
         self.modifyListener?.didModify(date: date)
     }
     
-    public func isEqual(_ object: KeyVal?) -> Bool {
+    public func isEqual(_ object: KeyValXML?) -> Bool {
         guard let notNil = object else {
             return false
         }
@@ -98,7 +98,7 @@ public final class KeyVal: NSObject, XMLObjectDeserialization, Serializable, Mod
 
 @available(iOS 13.0, *)
 @available(macOS 13.0, *)
-extension KeyVal: CustomStringConvertible {
+extension KeyValXML: CustomStringConvertible {
     public override var description: String {
         return "\(key): \(value)"
     }

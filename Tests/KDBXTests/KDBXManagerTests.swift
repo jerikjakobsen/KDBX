@@ -63,24 +63,24 @@ final class KDBXManagerTests: XCTestCase {
         let mockManager = KDBXManager(generator: "KeePassXC")
         mockManager.setDBName(name: "Test")
         mockManager.setDBDescription(description: "")
-        let entry1 = Entry(name: "Testing")
+        let entry1 = EntryXML(name: "Testing")
         let keyVals1 = [
-            KeyVal(key: "Notes", value: ""),
-            KeyVal(key: "Password", value: "testing", protected: true),
-            KeyVal(key: "URL", value: ""),
-            KeyVal(key: "UserName", value: "John"),
+            KeyValXML(key: "Notes", value: ""),
+            KeyValXML(key: "Password", value: "testing", protected: true),
+            KeyValXML(key: "URL", value: ""),
+            KeyValXML(key: "UserName", value: "John"),
         ]
         for kv in keyVals1 {
             entry1.addKeyVal(keyVal: kv)
         }
         mockManager.addEntry(entry: entry1)
         
-        let entry2 = Entry(name: "Testing2")
+        let entry2 = EntryXML(name: "Testing2")
         let keyVals2 = [
-            KeyVal(key: "Notes", value: ""),
-            KeyVal(key: "Password", value: "testing2", protected: true),
-            KeyVal(key: "URL", value: ""),
-            KeyVal(key: "UserName", value: "john"),
+            KeyValXML(key: "Notes", value: ""),
+            KeyValXML(key: "Password", value: "testing2", protected: true),
+            KeyValXML(key: "URL", value: ""),
+            KeyValXML(key: "UserName", value: "john"),
         ]
         for kv in keyVals2 {
             entry2.addKeyVal(keyVal: kv)

@@ -11,7 +11,7 @@ import SWXMLHash
 
 @available(iOS 13.0, *)
 @available(macOS 13.0, *)
-public final class Group: NSObject, XMLObjectDeserialization, Serializable {
+public final class GroupXML: NSObject, XMLObjectDeserialization, Serializable {
     public let UUID: XMLString
     var name: XMLString {
         didSet {
@@ -27,11 +27,11 @@ public final class Group: NSObject, XMLObjectDeserialization, Serializable {
             self.modifyListener?.didModify(date: updateDate)
         }
     }
-    private var times: Times
-    public var entries: [Entry]
+    private var times: TimesXML
+    public var entries: [EntryXML]
     internal var modifyListener: ModifyListener?
     
-    internal init(UUID: XMLString, name: XMLString, iconID: XMLString, times: Times, entries: [Entry] = []) {
+    internal init(UUID: XMLString, name: XMLString, iconID: XMLString, times: TimesXML, entries: [EntryXML] = []) {
         self.UUID = UUID
         self.name = name
         self.iconID = iconID
@@ -39,23 +39,23 @@ public final class Group: NSObject, XMLObjectDeserialization, Serializable {
         self.entries = entries
     }
     
-    public init(name: String = "Root", iconID: String = "0", entries: [Entry] = [], expires: Bool = false, expiryTime: Date? = nil) {
+    public init(name: String = "Root", iconID: String = "0", entries: [EntryXML] = [], expires: Bool = false, expiryTime: Date? = nil) {
         self.UUID = XMLString(content: Foundation.UUID().uuidString, name: "UUID")
         self.name = XMLString(content: name, name: "Name")
         self.iconID = XMLString(content: iconID, name: "IconID")
-        self.times =  Times.now(expires: expires, expiryTime: expiryTime)
+        self.times =  TimesXML.now(expires: expires, expiryTime: expiryTime)
         self.entries = entries
     }
     
-    public static func deserialize(_ element: XMLIndexer, streamCipher: StreamCipher) throws -> Group {
+    public static func deserialize(_ element: XMLIndexer, streamCipher: StreamCipher) throws -> GroupXML {
         let entries = try element["Entry"].all.map { entry in
-            return try Entry.deserialize(entry, streamCipher: streamCipher)
+            return try EntryXML.deserialize(entry, streamCipher: streamCipher)
         }
         
-        var times: Times = (try? element["Times"].value()) ?? Times.now(expires: false)
+        var times: TimesXML = (try? element["Times"].value()) ?? TimesXML.now(expires: false)
         times.update(modified: false)
         
-        return try Group(UUID: element["UUID"].value(),
+        return try GroupXML(UUID: element["UUID"].value(),
                          name: element["Name"].value(),
                          iconID: element["IconID"].value(),
                          times: times,
@@ -77,7 +77,7 @@ public final class Group: NSObject, XMLObjectDeserialization, Serializable {
 """
     }
     
-    public func addEntry(entry: Entry) {
+    public func addEntry(entry: EntryXML) {
         self.entries.append(entry)
         
         let updateDate: Date = Date.now
@@ -111,11 +111,11 @@ public final class Group: NSObject, XMLObjectDeserialization, Serializable {
         return self.iconID.content
     }
     
-    public func getEntries() -> [Entry] {
+    public func getEntries() -> [EntryXML] {
         return self.entries
     }
     
-    public func isEqual(_ object: Group?) -> Bool {
+    public func isEqual(_ object: GroupXML?) -> Bool {
         guard let notNil = object else {
             return false
         }

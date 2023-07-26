@@ -45,13 +45,13 @@ class KDBXManager {
     //before dGVzdGluZzI=
     //after  dGVzdGluZzI=
     
-    public func addEntry(entry: Entry) {
+    public func addEntry(entry: EntryXML) {
         self.xmlManager.group?.addEntry(entry: entry)
     }
     public func removeEntry(UUID: String) {
         self.xmlManager.group?.removeEntry(UUID: UUID)
     }
-    public func getEntries() -> [Entry]? {
+    public func getEntries() -> [EntryXML]? {
         return self.xmlManager.group?.getEntries()
     }
     

@@ -11,19 +11,19 @@ import StreamCiphers
 
 @available(iOS 13.0, *)
 @available(macOS 13.0, *)
-public final class Meta: NSObject, XMLObjectDeserialization, Serializable, ModifyListener {
+public final class MetaXML: NSObject, XMLObjectDeserialization, Serializable, ModifyListener {
     
     internal var generator: XMLString
     internal var databaseName: XMLString
     internal var databaseDescription: XMLString
-    internal var times: Times
-    public var color: Color? {
+    internal var times: TimesXML
+    public var color: ColorXML? {
         didSet {
             self.color?.modifyListener = self
         }
     }
     
-    internal init(generator: XMLString, databaseName: XMLString, databaseDescription: XMLString, times: Times, color: Color?) {
+    internal init(generator: XMLString, databaseName: XMLString, databaseDescription: XMLString, times: TimesXML, color: ColorXML?) {
         self.generator = generator
         self.databaseName = databaseName
         self.databaseDescription = databaseDescription
@@ -36,11 +36,11 @@ public final class Meta: NSObject, XMLObjectDeserialization, Serializable, Modif
         self.color?.modifyListener = self
     }
     
-    public init(generator: String = "Keys", databaseName: String, databaseDescription: String, color: Color? = nil) {
+    public init(generator: String = "Keys", databaseName: String, databaseDescription: String, color: ColorXML? = nil) {
         self.generator = XMLString(content: generator, name: "Generator")
         self.databaseName = XMLString(content: databaseName, name: "DatabaseName")
         self.databaseDescription = XMLString(content: databaseDescription, name: "DatabaseDescription")
-        self.times = Times.now(expires: false, expiryTime: nil)
+        self.times = TimesXML.now(expires: false, expiryTime: nil)
         self.color = color
         super.init()
         self.generator.modifyListener = self
@@ -49,12 +49,12 @@ public final class Meta: NSObject, XMLObjectDeserialization, Serializable, Modif
         self.color?.modifyListener = self
     }
     
-    public static func deserialize(_ element: XMLIndexer) throws -> Meta {
+    public static func deserialize(_ element: XMLIndexer) throws -> MetaXML {
         
-        var times: Times = (try? element["Times"].value()) ?? Times.now(expires: false)
+        var times: TimesXML = (try? element["Times"].value()) ?? TimesXML.now(expires: false)
         times.update(modified: false)
         
-        return Meta(
+        return MetaXML(
             generator: try element["Generator"].value(),
             databaseName: try element["DatabaseName"].value(),
             databaseDescription: try element["DatabaseDescription"].value(),
@@ -93,7 +93,7 @@ public final class Meta: NSObject, XMLObjectDeserialization, Serializable, Modif
         self.times.update(modified: true, date: date)
     }
     
-    public func isEqual(_ object: Meta?) -> Bool {
+    public func isEqual(_ object: MetaXML?) -> Bool {
         guard let notNil = object else {
             return false
         }

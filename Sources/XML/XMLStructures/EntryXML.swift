@@ -9,21 +9,21 @@ import Foundation
 import StreamCiphers
 import SWXMLHash
 
-enum EntryError: Error {
+enum EntryXMLError: Error {
     case NoTitleFound
 }
 
 @available(iOS 13.0, *)
 @available(macOS 13.0, *)
-public final class Entry: NSObject, Serializable, XMLObjectDeserialization, ModifyListener {
-    public var KeyVals: [KeyVal]
+public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, ModifyListener {
+    public var KeyVals: [KeyValXML]
     public let UUID: XMLString
     var iconID: XMLString
-    private var times: Times
+    private var times: TimesXML
     public var name: XMLString
     internal var modifyListener: ModifyListener?
     
-    internal init(KeyVals: [KeyVal], UUID: XMLString, iconID: XMLString, times: Times, name: XMLString) {
+    internal init(KeyVals: [KeyValXML], UUID: XMLString, iconID: XMLString, times: TimesXML, name: XMLString) {
         self.KeyVals = KeyVals
         self.UUID = UUID
         self.iconID = iconID
@@ -37,7 +37,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
         }
     }
     
-    public init(iconID: String = "0", keyVals: [KeyVal] = [], expires: Bool = false, expiryTime: Date? = nil, name: String) {
+    public init(iconID: String = "0", keyVals: [KeyValXML] = [], expires: Bool = false, expiryTime: Date? = nil, name: String) {
         let uuidXMLString = XMLString(content: Foundation.UUID().uuidString, name: "UUID")
         let iconIDXMLString: XMLString = XMLString(content: iconID, name: "IconID")
         let entryNameXMLString = XMLString(content: name, name: "EntryName")
@@ -45,7 +45,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
         self.KeyVals = keyVals
         self.UUID = uuidXMLString
         self.iconID = iconIDXMLString
-        self.times = Times.now(expires: expires, expiryTime: expiryTime)
+        self.times = TimesXML.now(expires: expires, expiryTime: expiryTime)
         self.name = entryNameXMLString
         super.init()
         self.name.modifyListener = self
@@ -55,8 +55,8 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
         }
     }
     
-    public static func deserialize(_ element: XMLIndexer) throws -> Entry {
-        var keyVals: [KeyVal] = try element["String"].value()
+    public static func deserialize(_ element: XMLIndexer) throws -> EntryXML {
+        var keyVals: [KeyValXML] = try element["String"].value()
         var entryNameXMLString: XMLString? = try? element["EntryName"].value()
         if entryNameXMLString == nil {
             let titleKeyVal = keyVals.filter({ kv in
@@ -64,7 +64,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
             })
             
             if titleKeyVal.count == 0 {
-                throw EntryError.NoTitleFound
+                throw EntryXMLError.NoTitleFound
             }
             
             let name = titleKeyVal[0].value.content
@@ -76,21 +76,21 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
         }
         
         guard let entryName = entryNameXMLString else {
-            throw EntryError.NoTitleFound
+            throw EntryXMLError.NoTitleFound
         }
         
-        var times: Times = try element["Times"].value()
+        var times: TimesXML = try element["Times"].value()
         times.update(modified: false)
         
-        return try Entry(KeyVals: keyVals,
+        return try EntryXML(KeyVals: keyVals,
                          UUID: element["UUID"].value(),
                          iconID: element["IconID"].value(),
                          times: times,
                          name: entryName)
     }
-    public static func deserialize(_ element: XMLIndexer, streamCipher: StreamCipher? = nil) throws -> Entry {
-        var keyVals: [KeyVal] = try element["String"].all.map { keyval in
-            return try KeyVal.deserialize(keyval, streamCipher: streamCipher)
+    public static func deserialize(_ element: XMLIndexer, streamCipher: StreamCipher? = nil) throws -> EntryXML {
+        var keyVals: [KeyValXML] = try element["String"].all.map { keyval in
+            return try KeyValXML.deserialize(keyval, streamCipher: streamCipher)
         }
         var entryNameXMLString: XMLString? = try? element["EntryName"].value()
         if entryNameXMLString == nil {
@@ -99,7 +99,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
             })
             
             if titleKeyVal.count == 0 {
-                throw EntryError.NoTitleFound
+                throw EntryXMLError.NoTitleFound
             }
             
             let name = titleKeyVal[0].value.content
@@ -111,13 +111,13 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
         }
         
         guard let entryName = entryNameXMLString else {
-            throw EntryError.NoTitleFound
+            throw EntryXMLError.NoTitleFound
         }
         
-        var times: Times = try element["Times"].value()
+        var times: TimesXML = try element["Times"].value()
         times.update(modified: false)
         
-        return try Entry(KeyVals: keyVals,
+        return try EntryXML(KeyVals: keyVals,
                          UUID: element["UUID"].value(),
                          iconID: element["IconID"].value(),
                          times: times,
@@ -139,7 +139,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
             """
     }
     
-    public func addKeyVal(keyVal: KeyVal) {
+    public func addKeyVal(keyVal: KeyValXML) {
         keyVal.modifyListener = self
         self.KeyVals.append(keyVal)
         let updateDate: Date = Date.now
@@ -147,7 +147,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
         self.modifyListener?.didModify(date: updateDate)
     }
     
-    public func addKeyVals(_ keyVals: [KeyVal]) {
+    public func addKeyVals(_ keyVals: [KeyValXML]) {
         for kv in keyVals {
             self.addKeyVal(keyVal: kv)
         }
@@ -182,7 +182,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
         return self.iconID.content
     }
     
-    public func isEqual(_ object: Entry?) -> Bool {
+    public func isEqual(_ object: EntryXML?) -> Bool {
         guard let notNil = object else {
             return false
         }
