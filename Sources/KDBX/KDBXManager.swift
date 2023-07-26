@@ -1,6 +1,8 @@
 import Foundation
 import XML
 import StreamCiphers
+import Encryption
+import CryptoKit
 
 @available(iOS 13.0, *)
 @available(macOS 10.15, *)
@@ -11,6 +13,7 @@ class KDBXManager {
         case BodyNil
         case StreamKeyNil
         case UnableToOpenStream
+        case UnableToConvertStringToData
     }
     
     var header: KDBXHeader? = nil
@@ -22,10 +25,10 @@ class KDBXManager {
             throw KDBXManagerError.UnableToOpenStream
         }
         stream.open()
-        self.header = try KDBXHeader(stream: stream)
-        self.body = try KDBXBody(password: password, header: self.header!, stream: stream)
+        self.header = try KDBXHeader(stream: stream, password: password)
+        self.body = try KDBXBody.fromEncryptedStream(password: password, header: self.header!, encryptedStream: stream)
         stream.close()
-        guard let xmlData = self.body?.cleanInnerData else {
+        guard let xmlData = self.body?.XMLData else {
             throw KDBXManagerError.BodyNil
         }
         self.XMLData = xmlData
@@ -38,6 +41,9 @@ class KDBXManager {
     init(generator: String? = nil) {
         self.xmlManager = XMLManager(generator: generator)
     }
+    
+    //before dGVzdGluZzI=
+    //after  dGVzdGluZzI=
     
     public func addEntry(entry: Entry) {
         self.xmlManager.group?.addEntry(entry: entry)
@@ -72,4 +78,36 @@ class KDBXManager {
     public func getDBDescription() -> String? {
         return self.xmlManager.meta?.getDBDescription()
     }
+    
+    public func save(fileURL: URL, password: String) throws {
+        guard let stream = OutputStream(url: fileURL, append: false) else {
+            throw KDBXManagerError.UnableToOpenStream
+        }
+        stream.open()
+        defer {
+            stream.close()
+        }
+        
+        if (self.header == nil || self.body == nil) {
+            self.header = try KDBXHeader(password: password)
+            self.body = try KDBXBody(header: self.header!)
+        }
+        try self.header?.writeOuterHeader(stream: stream, password: password)
+        let newStreamKey = try generateRandomBytes(size: 64)
+        
+        let hashedKey = Data(SHA512.hash(data: newStreamKey))
+        let key = hashedKey.prefix(32)
+        let nonce = hashedKey.subdata(in: 32..<(32 + 12))
+        
+        let xmlString = try self.xmlManager.toXML(streamKey: key, nonce: nonce)
+        guard let xmlData = xmlString.data(using: .utf8) else {
+            throw KDBXManagerError.UnableToConvertStringToData
+        }
+        
+        try self.body?.loadXMLData(xmlData: xmlData)
+        self.body?.streamKey = newStreamKey
+        self.body?.streamCipher = 3
+        try self.body?.encrypt(writeStream: stream)
+    }
+    
 }

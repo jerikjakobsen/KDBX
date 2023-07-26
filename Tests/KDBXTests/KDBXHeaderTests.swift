@@ -26,14 +26,14 @@ final class KDBXHeaderTests: XCTestCase {
             let stream: InputStream? = InputStream(url: fileURL)
             XCTAssertNotNil(stream)
             stream!.open()
-            let header = try KDBXHeader(stream: stream!)
+            let header = try KDBXHeader(stream: stream!, password: "butter")
             XCTAssertNotNil(header)
             let cipherID = "0x31C1F2E6BF714350BE5805216AFC5AFF"
             let compressionFlag = true
             let masterSeedLength = 32
             let encryptionIVLength = 16
             XCTAssertNotNil(header.cipherID)
-            XCTAssertEqual(cipherID, uint8ArrayToHexString(header.cipherID!))
+            XCTAssertEqual(cipherID, header.cipherID!.toHexString())
             XCTAssertNotNilAndEqual(header.compressionFlag, compressionFlag, "Compression flag not equal")
             XCTAssertNotNil(header.masterSeed)
             XCTAssertEqual(header.masterSeed?.count, masterSeedLength)
@@ -53,7 +53,7 @@ final class KDBXHeaderTests: XCTestCase {
         XCTAssertNotNil(kdfParameters)
         if let params = kdfParameters {
             XCTAssertNotNil(params.UUID)
-            XCTAssertEqual(uint8ArrayToHexString(params.UUID), UUID)
+            XCTAssertEqual(params.UUID.toHexString(), UUID)
             XCTAssertNotNil(params.SArgon)
             XCTAssertEqual(params.SArgon?.count, saltLength)
             XCTAssertNotNilAndEqual(params.P, P)
@@ -68,5 +68,19 @@ final class KDBXHeaderTests: XCTestCase {
         if let unwrappedValue = optionalValue {
             XCTAssertEqual(unwrappedValue, expectedValue, message(), file: file, line: line)
         }
+    }
+    
+    @available(iOS 13.0, *)
+    @available(macOS 13.0, *)
+    func testEncodeHeader() throws {
+        let header = try KDBXHeader(password: "butter")
+        let dataStream = OutputStream(toMemory: ())
+        try header.writeOuterHeader(stream: dataStream, password: "butter")
+        let attemptedHeaderBytes = dataStream.property(forKey: .dataWrittenToMemoryStreamKey)! as! Data
+        dataStream.close()
+        let readStream = InputStream(data: attemptedHeaderBytes)
+        let headerFromWrite = try KDBXHeader(stream: readStream, password: "butter")
+        readStream.close()
+        // If it doesn't throw an error, test passed
     }
 }

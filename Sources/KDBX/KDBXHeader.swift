@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  KDBXHeader.swift
 //  
 //
 //  Created by John Jakobsen on 4/12/23.
@@ -7,38 +7,40 @@
 
 import Foundation
 import CryptoKit
+import Encryption
+
+enum Cipher {
+    case AES128CBC
+    case AES256CBC
+    case TwofishCBC
+    case ChaCha20
+}
 
 @available(iOS 13.0, *)
 @available(macOS 10.15, *)
 @available(macOS 13.0, *)
 class KDBXHeader {
-    var cipherID: [UInt8]? = nil
+    var cipherID: Data? = nil
     var compressionFlag: Bool? = nil
-    var masterSeed: [UInt8]? = nil
-    var transformSeed: [UInt8]? = nil
+    var masterSeed: Data? = nil
+    var transformSeed: Data? = nil
     var transfromRounds: Int? = nil
-    var streamStartBytes: [UInt8]? = nil
-    var innerRandomStreamID: [UInt8]? = nil
-    var encryptionIV: [UInt8]? = nil
+    var streamStartBytes: Data? = nil
+    var innerRandomStreamID: Data? = nil
+    var encryptionIV: Data? = nil
     var kdfParameters: KDFParameters? = nil
     var publicCustomData: [String: Any]? = nil
-    var headerHash: [UInt8]? = nil
-    var headerSignature: [UInt8]? = nil
-    var headerBytes: [UInt8]? = nil
-    var HMACKey: [UInt8]? = nil
+    var headerSignature: Data? = nil
+    var headerBytes: Data? = nil
+    var HMACKey: Data? = nil
+    public var encryptionKey: Data? = nil
+    public var baseHMACKey: Data? = nil
     static let signature1: UInt32 = 0x9AA2D903
     static let signature2: UInt32 = 0xB54BFB67
     static let kdbxVMinor: UInt16 = 1
     static let kdbxVMajor: UInt16 = 4
     
-    enum Cipher {
-        case AES128CBC
-        case AES256CBC
-        case TwofishCBC
-        case ChaCha20
-    }
-    
-    enum HeaderTypeCode: Int {
+    enum HeaderTypeCode: UInt8 {
         case EndOfHeader = 0
         case Comment = 1
         case CipherID = 2
@@ -63,7 +65,7 @@ class KDBXHeader {
         case Int32 = 0x0c
         case Int64 = 0x0d
         case StringUTF8 = 0x18
-        case ByteArray = 0x42
+        case Data = 0x42
         case Unknown = 0x88
     }
     
@@ -82,18 +84,103 @@ class KDBXHeader {
         case HashNotEqual
         case ReadHeaderBytes
         case NoCipherID
+        case NoWriteSpace
+        case StreamWriteError
+        case UnableToGetPointerAddress
+        case UnexpectedNil
         case UnknownCipher
+        case NoArgonSalt
+        case NoArgonIterations
+        case NoArgonMemory
+        case NoArgonParallelism
+        case NoArgonVersion
+        case NoAESSalt
+        case NoRounds
+        case NoMasterSeed
+        case KeyCreationUnsuccessful
+        case HMACBaseKeyNil
+        case HeaderBytesNil
+        case HeaderHMACHashNil
+        case ComputedHMACNotEqual
     }
     
-    init(stream: InputStream, offset: Int? = nil) throws {
-        headerBytes = []
+    // From File
+    init(stream: InputStream, password: String) throws {
+        self.headerBytes = Data()
         try parseOuterHeader(stream: stream)
-        guard let hHash = _readNBytes(stream: stream, n: 32, saveBytes: false) else {throw KDBXHeaderError.ReadHeaderHash}
-        guard let hmacHash = _readNBytes(stream: stream, n: 32, saveBytes: false) else {throw KDBXHeaderError.ReadHeaderSignatureHash}
-        guard let rawHeaderBytes = self.headerBytes else {throw KDBXHeaderError.ReadHeaderBytes}
-        let hash = Array(SHA256.hash(data: Data(rawHeaderBytes)).makeIterator())
-        guard hash == hHash else {throw KDBXHeaderError.HashNotEqual}
+        guard let readHeaderHash = try _readNBytes(stream: stream, n: 32, saveBytes: false) else {
+            throw KDBXHeaderError.ReadHeaderHash
+        }
+        guard let readhmacHash = try _readNBytes(stream: stream, n: 32, saveBytes: false) else {
+            throw KDBXHeaderError.ReadHeaderSignatureHash
+        }
+        let readHMACHashData = Data(readhmacHash)
+        guard let rawHeaderBytes = self.headerBytes else {
+            throw KDBXHeaderError.ReadHeaderBytes
+        }
+        let computedHash = Data(SHA256.hash(data: Data(rawHeaderBytes)))
+        guard computedHash == Data(readHeaderHash) else {
+            throw KDBXHeaderError.HashNotEqual
+        }
+        try computeKeys(password: password)
+
+        guard try computeHMACSignature() == readHMACHashData else {
+            throw KDBXHeaderError.ComputedHMACNotEqual
+        }
+    }
+    
+    init(password: String) throws {
+        self.cipherID = hexStringToData(DefaultValues.CipherID)
+
+        self.compressionFlag = true
+
+        self.kdfParameters = try KDFParameters()
+    }
+    
+    func computeKeys(password: String) throws {
+        //TODO: Check for keyfile, this implementation only uses the password
+        let hashOnce = Data(SHA256.hash(data: Data(stringToUInt8Array(password))))
+        let compositeKey = Data(SHA256.hash(data: hashOnce))
+        var derivedKey: Data? = nil
+        switch (self.kdfParameters?.keyType) {
+            case .Argon2d:
+            fallthrough
+            case .Argon2id:
+            guard let argSalt = self.kdfParameters?.SArgon else {throw KDBXHeaderError.NoArgonSalt}
+            guard let iterations = self.kdfParameters?.I else {throw KDBXHeaderError.NoArgonIterations}
+            guard let memory = self.kdfParameters?.M else {throw KDBXHeaderError.NoArgonMemory}
+            guard let parallelism = self.kdfParameters?.P else {throw KDBXHeaderError.NoArgonParallelism}
+            guard let version = self.kdfParameters?.V else {throw KDBXHeaderError.NoArgonVersion}
+            derivedKey = try ArgonHash(password: compositeKey, salt: Data(argSalt), iterations: Int(iterations), memory: Int(memory)/1024, parallelism: Int(parallelism), keyType: self.kdfParameters?.keyType == .Argon2d ? "Argon2d" : "Argon2id", version: Int(version))
+                break
+            case .AESKDF:
+            // TODO: Check this over, currently not supported
+            guard let AESSalt = self.kdfParameters?.S else {throw KDBXHeaderError.NoAESSalt}
+            guard let rounds = self.kdfParameters?.R else {throw KDBXHeaderError.NoRounds}
+            derivedKey = aesKDF(seed: compositeKey, outputKeyLength: 32)
+                break
+            case .Unknown:
+                throw KDBXHeaderError.UnknownCipher
+            default:
+                throw KDBXHeaderError.UnknownCipher
+        }
+        guard let masterSeed = self.masterSeed else {throw KDBXHeaderError.NoMasterSeed}
+        guard let derivedKeyNotNull = derivedKey else {throw KDBXHeaderError.KeyCreationUnsuccessful}
+        self.encryptionKey = Data(SHA256.hash(data: Data(masterSeed) + derivedKeyNotNull))
+        self.baseHMACKey = Data(SHA512.hash(data: Data(masterSeed) + Data(derivedKeyNotNull) + Data(repeating: 0x01, count: 1)))
+    }
+    
+    func computeHMACSignature(headerBytes: Data? = nil, baseHMACKey: Data? = nil) throws -> Data {
+        guard let baseHMACKey = baseHMACKey ?? self.baseHMACKey else {
+            throw KDBXHeaderError.HMACBaseKeyNil
+        }
         
+        let computedHMacKey = Data(SHA512.hash(data: Data(repeating: 0xFF, count: 8) + baseHMACKey))
+        
+        guard let headerBytes = headerBytes ?? self.headerBytes else {
+            throw KDBXHeaderError.HeaderBytesNil
+        }
+        return Data(HMAC<SHA256>.authenticationCode(for: Data(headerBytes), using: SymmetricKey(data: computedHMacKey)))
     }
     
     static func _byteToCode(num: UInt8) -> HeaderTypeCode {
@@ -145,8 +232,8 @@ class KDBXHeader {
             return VariantMapType.Int64
         case VariantMapType.StringUTF8.rawValue:
             return VariantMapType.StringUTF8
-        case VariantMapType.ByteArray.rawValue:
-            return VariantMapType.ByteArray
+        case VariantMapType.Data.rawValue:
+            return VariantMapType.Data
         default:
             return VariantMapType.Unknown
         }
@@ -160,30 +247,30 @@ class KDBXHeader {
             // ValueSize - UInt32
             // Value byte[ValueSize] -> Convert to type
             
-            guard let tT = _readNBytes(stream: stream, n: 1, saveBytes: false) else {throw KDBXHeaderError.VariantMapParse}
+            guard let tT = try _readNBytes(stream: stream, n: 1, saveBytes: false) else {throw KDBXHeaderError.VariantMapParse}
             guard tT.count == 1 else {throw KDBXHeaderError.VariantMapParse}
             let type = KDBXHeader._byteToVariantMapType(byte: tT[0])
             
             if (type == .EndOfMap) {return ("", nil, VariantMapType.EndOfMap)}
             
-            guard let ksT = _readNBytes(stream: stream, n: 4, saveBytes: false) else {throw KDBXHeaderError.VariantMapParse}
+            guard let ksT = try _readNBytes(stream: stream, n: 4, saveBytes: false) else {throw KDBXHeaderError.VariantMapParse}
             guard ksT.count == 4 else {throw KDBXHeaderError.VariantMapParse}
-            let keySize: UInt32 = bytesToUnsignedInteger(ksT)
+            let keySize: UInt32 = ksT.toUnsignedInteger()
 
-            guard let kT = _readNBytes(stream: stream, n: Int(keySize), saveBytes: false) else {throw KDBXHeaderError.VariantMapParse}
+            guard let kT = try _readNBytes(stream: stream, n: Int(keySize), saveBytes: false) else {throw KDBXHeaderError.VariantMapParse}
             guard kT.count == Int(keySize) else {throw KDBXHeaderError.VariantMapParse}
             let key: String
             do {
-                key = try bytesToUTF8String(kT)
+                key = try kT.toUTF8String()
             } catch {
                 throw error
             }
             
-            guard let vsT = _readNBytes(stream: stream, n: 4, saveBytes: false) else {throw KDBXHeaderError.VariantMapParse}
+            guard let vsT = try _readNBytes(stream: stream, n: 4, saveBytes: false) else {throw KDBXHeaderError.VariantMapParse}
             guard vsT.count == 4 else {throw KDBXHeaderError.VariantMapParse}
-            let valueSize: UInt32 = bytesToUnsignedInteger(vsT)
+            let valueSize: UInt32 = vsT.toUnsignedInteger()
             
-            guard let vT = _readNBytes(stream: stream, n: Int(valueSize), saveBytes: false) else {throw KDBXHeaderError.VariantMapParse}
+            guard let vT = try _readNBytes(stream: stream, n: Int(valueSize), saveBytes: false) else {throw KDBXHeaderError.VariantMapParse}
             guard vT.count == Int(valueSize) else {throw KDBXHeaderError.VariantMapParse}
             
             var value: Any?
@@ -191,31 +278,31 @@ class KDBXHeader {
                 case .Bool:
                     value = vT[0] == 1
                     break
-                case .ByteArray:
+                case .Data:
                     value = vT
                     break
                 case .Int32:
-                    let num: Int32 = bytesToSignedInteger(vT)
+                let num: Int32 = vT.toSignedInteger()
                     value = num
                     break
                 case .Int64:
-                    let num: Int64 = bytesToSignedInteger(vT)
+                let num: Int64 = vT.toSignedInteger()
                     value = num
                     break
                 case .StringUTF8:
                     do {
-                        let str: String = try bytesToUTF8String(vT)
+                        let str: String = try vT.toUTF8String()
                         value = str
                     } catch {
                         throw error
                     }
                     break
                 case .UInt32:
-                    let num: UInt32 = bytesToUnsignedInteger(vT)
+                let num: UInt32 = vT.toUnsignedInteger()
                     value = num
                     break
                 case .UInt64:
-                    let num: UInt64 = bytesToUnsignedInteger(vT)
+                let num: UInt64 = vT.toUnsignedInteger()
                     value = num
                     break
                 default:
@@ -226,8 +313,8 @@ class KDBXHeader {
         }
         // Check Variant Map Version
         
-        guard let versionBytes = _readNBytes(stream: stream, n: 2, saveBytes: false) else {throw KDBXHeaderError.ParseValue}
-        let versionNum: UInt16 = bytesToUnsignedInteger(versionBytes)
+        guard let versionBytes = try _readNBytes(stream: stream, n: 2, saveBytes: false) else {throw KDBXHeaderError.ParseValue}
+        let versionNum: UInt16 = versionBytes.toUnsignedInteger()
         // TODO: Check version Number
         var variantMap: [String: Any] = [:]
         while (stream.hasBytesAvailable) {
@@ -245,16 +332,15 @@ class KDBXHeader {
     }
     
     func _readHeaderLength(stream: InputStream) throws -> UInt32  {
-        guard let lengthBytes = _readNBytes(stream: stream, n: 4) else {throw KDBXHeaderError.ParseLength}
-        let length: UInt32 = bytesToUnsignedInteger(lengthBytes)
+        guard let lengthBytes = try _readNBytes(stream: stream, n: 4) else {throw KDBXHeaderError.ParseLength}
+        let length: UInt32 = lengthBytes.toUnsignedInteger()
         return length
     }
     func _readHeaderCode(stream: InputStream) throws -> HeaderTypeCode {
-        guard let codeByte = _readNBytes(stream: stream, n: 1) else {throw KDBXHeaderError.ParseCode}
-        let codeInt: UInt8 = bytesToUnsignedInteger(codeByte)
+        guard let codeByte = try _readNBytes(stream: stream, n: 1) else {throw KDBXHeaderError.ParseCode}
+        let codeInt: UInt8 = codeByte.toUnsignedInteger()
         return KDBXHeader._byteToCode(num: codeInt)
     }
-    
     
     func _readHeaderTLV(stream: InputStream) throws -> Bool {
 
@@ -275,7 +361,7 @@ class KDBXHeader {
             throw error
         }
         let lengthInt = Int(length)
-        guard let valueBytes = _readNBytes(stream: stream, n: lengthInt) else {
+        guard let valueBytes = try _readNBytes(stream: stream, n: lengthInt) else {
             throw KDBXHeaderError.ParseValue
         }
         switch (code) {
@@ -289,7 +375,7 @@ class KDBXHeader {
             guard valueBytes.count == 4 else {
                 throw KDBXHeaderError.IllegalValue
             }
-            let compVal: UInt32 = bytesToUnsignedInteger(valueBytes)
+            let compVal: UInt32 = valueBytes.toUnsignedInteger()
             self.compressionFlag = compVal == 1
             break
         case .MasterSeed:
@@ -331,22 +417,16 @@ class KDBXHeader {
     
     // Outer Header Parser ------------------------------------------------------------------------------
     func parseOuterHeader(stream: InputStream) throws {
-        // Outer Header is as such
-        /*
-         Signature 1, Signature 2, Version Minor, Version Major
-         
-         
-         */
-        guard let sig1Bytes = _readNBytes(stream: stream, n: 4) else {throw KDBXHeaderError.SignatureParse}
-        let sig1: UInt32 = bytesToUnsignedInteger(sig1Bytes)
-        guard let sig2Bytes = _readNBytes(stream: stream, n: 4) else {throw KDBXHeaderError.SignatureParse}
-        let sig2: UInt32 = bytesToUnsignedInteger(sig2Bytes)
+        guard let sig1Bytes = try _readNBytes(stream: stream, n: 4) else {throw KDBXHeaderError.SignatureParse}
+        let sig1: UInt32 = sig1Bytes.toUnsignedInteger()
+        guard let sig2Bytes = try _readNBytes(stream: stream, n: 4) else {throw KDBXHeaderError.SignatureParse}
+        let sig2: UInt32 = sig2Bytes.toUnsignedInteger()
         if (sig2 != KDBXHeader.signature2 || sig1 != KDBXHeader.signature1) {
             throw KDBXHeaderError.WrongSignature
         }
-        guard let vMinorBytes = _readNBytes(stream: stream, n: 2) else {throw KDBXHeaderError.VersionParse}
-        guard let vMajorBytes = _readNBytes(stream: stream, n: 2) else {throw KDBXHeaderError.VersionParse}
-        let vMajor: UInt16 = bytesToUnsignedInteger(vMajorBytes)
+        guard let vMinorBytes = try _readNBytes(stream: stream, n: 2) else {throw KDBXHeaderError.VersionParse}
+        guard let vMajorBytes = try _readNBytes(stream: stream, n: 2) else {throw KDBXHeaderError.VersionParse}
+        let vMajor: UInt16 = vMajorBytes.toUnsignedInteger()
         if (vMajor != KDBXHeader.kdbxVMajor) {
             throw KDBXHeaderError.WrongMajorVersion
         }
@@ -360,29 +440,9 @@ class KDBXHeader {
         }
     }
     
-    
-    func _readNBytes(stream: InputStream, n: Int, saveBytes: Bool = true) -> [UInt8]? {
-        let bufferSize = n
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-        let bytesRead = stream.read(buffer, maxLength: bufferSize)
-        var arr: [UInt8]? = nil
-        if bytesRead < 0 {
-            print("An error occurred while reading the file: \(stream.streamError?.localizedDescription ?? "Unknown error")")
-        } else if bytesRead == 0 {
-            print("End of file reached.")
-        } else {
-            arr = _pointerToArray(buffer: buffer, bufferSize: n)
-            if (saveBytes) {
-                headerBytes?.append(contentsOf: arr ?? [])
-            }
-        }
-        buffer.deallocate()
-        return arr
-    }
-    
     func getCipher() throws -> Cipher {
-        guard let cipherID: [UInt8] = self.cipherID else {throw KDBXHeaderError.NoCipherID}
-        let cipherIDString: String = uint8ArrayToHexString(cipherID)
+        guard let cipherID: Data = self.cipherID else {throw KDBXHeaderError.NoCipherID}
+        let cipherIDString: String = cipherID.toHexString()
         
         switch (cipherIDString) {
         case "0x61AB05A1946441C38D743A563DF8DD35":
@@ -396,7 +456,74 @@ class KDBXHeader {
         default:
             throw KDBXHeaderError.UnknownCipher
         }
+    }
+    
+    // MARK: Write Portion of the header file
+    
+    func writeOuterHeader(stream: OutputStream, password: String) throws {
+        var headerBytes = Data()
+        headerBytes += KDBXHeader.signature1.data // 4
+        headerBytes += KDBXHeader.signature2.data // 4
+        headerBytes += KDBXHeader.kdbxVMinor.data // 2
+        headerBytes += KDBXHeader.kdbxVMajor.data // 2
         
+        let cipherID: Data = self.cipherID ?? hexStringToData(DefaultValues.CipherID)
+        headerBytes += try createTLV(type: HeaderTypeCode.CipherID.rawValue, data: cipherID) // 5 + 16 = 21
+        
+        let compressionValue = Data([boolToUInt8(value: self.compressionFlag) ?? UInt8(1)]).rightPadded(to: 4)
+        headerBytes += try createTLV(type: HeaderTypeCode.CompressionFlags.rawValue, data: compressionValue) // 5 + 4 = 9
+        
+        let randomMainSeed = try generateRandomBytes(size: 32)
+        self.masterSeed = randomMainSeed
+        headerBytes += try createTLV(type: HeaderTypeCode.MasterSeed.rawValue, data: randomMainSeed)
+        
+        let randomEncryptionIV = try generateRandomBytes(size: 16)
+        self.encryptionIV = randomEncryptionIV
+        headerBytes += try createTLV(type: HeaderTypeCode.EncryptionIV.rawValue, data: randomEncryptionIV)
+        
+        self.kdfParameters = try self.kdfParameters?.updateSeeds()
+        guard let kdfparamsEncoding = try self.kdfParameters?.encodeVariantMap() else {
+            throw KDBXHeaderError.UnexpectedNil
+        }
+        headerBytes += try createTLV(type: HeaderTypeCode.KDFParameters.rawValue, data: kdfparamsEncoding)
+        
+        let endHeader: Data = Data([0x0d, 0x0a, 0x0d, 0x0a])
+        headerBytes += try createTLV(type: 0, data: endHeader)
+        
+        self.headerBytes = headerBytes
+        
+        var hashes = Data()
+        
+        try self.computeKeys(password: password)
+        let computedHash = Data(SHA256.hash(data: Data(headerBytes)))
+        hashes += computedHash
+        
+        let computedHMacSignature = try computeHMACSignature()
+        hashes += computedHMacSignature
+        
+        try _writeNBytes(stream: stream, data: headerBytes + hashes, saveBytes: false)
+    }
+    
+    func createTLV(type: UInt8, data: Data) throws -> Data {
+        let length = UInt32(data.count.magnitude).littleEndian.data.bytes
+        return Data([type] + length + data.bytes)
+    }
+    
+    func _writeNBytes(stream: OutputStream, data: Data, saveBytes: Bool = true) throws {
+        try stream.write(data: data)
+        if (saveBytes) {
+            if (headerBytes == nil) {
+                headerBytes = Data()
+            }
+            headerBytes?.append(contentsOf: [UInt8](data))
+        }
+    }
+    func _readNBytes(stream: InputStream, n: Int, saveBytes: Bool = true) throws -> Data? {
+        let data = try stream.readNBytes(n: n)
+        if (saveBytes) {
+            self.headerBytes?.append(data)
+        }
+        return data
     }
 }
 

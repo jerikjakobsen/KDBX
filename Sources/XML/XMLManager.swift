@@ -18,7 +18,7 @@ public class XMLManager: NSObject {
     //public let XMLData: Data?
     public private(set) var group: Group? = nil
     public private(set) var meta: Meta? = nil
-    public let chachaStream: ChaChaStream?
+    public var chachaStream: ChaChaStream?
     
     enum ParserError: Error {
         case UnexpectedNilOnOptional
@@ -62,13 +62,27 @@ public class XMLManager: NSObject {
 //        self.meta = self.meta?.modify(newDatabaseName: databaseName, newDatabaseDescription: databaseDescription)
 //    }
     //TODO: Replace self.chachastream with parameter
-    public func toXML() throws -> String {
-//        let hashedKey = Data(SHA512.hash(data: cipherKey))
-//
-//        let key = hashedKey.prefix(32)
-//        let nonce = hashedKey.subdata(in: 32..<(32 + 12))
-//
-//        let chachaStream = try ChaChaStream(key: key, nonce: nonce)
+    public func toXML(streamKey: Data? = nil, nonce: Data? = nil) throws -> String {
+        if let key = streamKey, let nonceVal = nonce {
+            if self.chachaStream == nil {
+                self.chachaStream = try ChaChaStream(key: key, nonce: nonceVal)
+            } else {
+                try self.chachaStream?.refresh(key: key, nonce: nonceVal)
+            }
+        }
+        return try """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <KeePassFile>
+            \(self.meta?.serialize(base64Encoded: true, streamCipher: self.chachaStream) ?? "")
+            <Root>
+                \(self.group?.serialize(base64Encoded: true, streamCipher: self.chachaStream) ?? "")
+            </Root>
+        </KeePassFile>
+        """
+    }
+    
+    public func toXML(streamCipher: ChaChaStream) throws -> String {
+        self.chachaStream = streamCipher
         return try """
         <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
         <KeePassFile>

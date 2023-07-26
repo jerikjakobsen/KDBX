@@ -15,6 +15,10 @@ public enum AESType {
     case s128
 }
 
+enum EncryptionError: Error {
+    case DataConversion
+}
+
 public func encryptAESCBC(data: Data, key: Data, iv: Data, type: AESType) -> Data? {
     let cryptLength = size_t(data.count + kCCBlockSizeAES128)
     var cryptData = Data(count: cryptLength)
@@ -82,6 +86,18 @@ public func decryptAESCBC(data: Data, key: Data, iv: Data, type: AESType) -> Dat
 public func ArgonHash(password: Data, salt: Data, iterations: Int, memory: Int, parallelism: Int, keyType: String, version: Int) throws -> Data {
     let argonSalt = Salt(bytes: salt)
     return try Argon2Swift.hashPasswordBytes(password: password, salt: argonSalt, iterations: iterations, memory: memory, parallelism: parallelism, type: keyType == "Argon2d" ? .d : .id, version: version == 0x10 ? .V10 : .V13 ).hashData()
+}
+
+public func generateRandomBytes(size: UInt) throws -> Data {
+    let sizeInt = Int(size)
+    var data = Data(count: sizeInt)
+    let result = data.withUnsafeMutableBytes { bufferPointer in
+        return SecRandomCopyBytes(kSecRandomDefault, sizeInt, bufferPointer)
+    }
+    guard result == errSecSuccess else {
+        throw EncryptionError.DataConversion
+    }
+    return data
 }
 //
 //import Sodium

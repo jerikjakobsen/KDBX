@@ -39,7 +39,7 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
     
     public init(iconID: String = "0", keyVals: [KeyVal] = [], expires: Bool = false, expiryTime: Date? = nil, name: String) {
         let uuidXMLString = XMLString(content: Foundation.UUID().uuidString, name: "UUID")
-        var iconIDXMLString: XMLString = XMLString(content: iconID, name: "IconID")
+        let iconIDXMLString: XMLString = XMLString(content: iconID, name: "IconID")
         let entryNameXMLString = XMLString(content: name, name: "EntryName")
         
         self.KeyVals = keyVals
@@ -145,6 +145,12 @@ public final class Entry: NSObject, Serializable, XMLObjectDeserialization, Modi
         let updateDate: Date = Date.now
         self.times.update(modified: true, date: updateDate)
         self.modifyListener?.didModify(date: updateDate)
+    }
+    
+    public func addKeyVals(_ keyVals: [KeyVal]) {
+        for kv in keyVals {
+            self.addKeyVal(keyVal: kv)
+        }
     }
     
     public func removeKeyVal(key: String) {

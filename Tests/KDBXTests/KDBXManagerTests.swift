@@ -37,14 +37,18 @@ final class KDBXManagerTests: XCTestCase {
     func testManagerDecodeEncode() throws {
         let managerFromDecryption = try helperCreateManager()
         let chachastream = managerFromDecryption.xmlManager.chachaStream
-        let xmlString = try managerFromDecryption.xmlManager.toXML()
+        let xmlString = try managerFromDecryption.xmlManager.toXML(streamCipher: chachastream!)
         chachastream?.reset()
-        let copyXMLManager = try XMLManager(xmlString: xmlString, chachaStream: chachastream!)
+        let copyXMLManager = try XMLManager(XMLData: xmlString.data(using: .utf8)!, cipherKey: managerFromDecryption.body!.streamKey!)
         XCTAssertTrue(copyXMLManager.equalContents(managerFromDecryption.xmlManager))
         
     }
     
     func helperCreateManager() throws -> KDBXManager {
+        return try KDBXManager(password: "butter", fileURL: helperRelativePath(path: "Passwords.kdbx"))
+    }
+    
+    func helperRelativePath(path: String) -> URL {
         // Get the current file URL
         let currentFileURL = URL(fileURLWithPath: #file)
 
@@ -52,9 +56,7 @@ final class KDBXManagerTests: XCTestCase {
         let directoryURL = currentFileURL.deletingLastPathComponent()
 
         // Create the file URL for the "Passwords.kdbx" file
-        let passwordsEncryptedFileURL = directoryURL.appendingPathComponent("Passwords.kdbx")
-        
-        return try KDBXManager(password: "butter", fileURL: passwordsEncryptedFileURL)
+        return directoryURL.appendingPathComponent(path)
     }
     
     func helperCreateMockManager() throws -> KDBXManager {
@@ -89,4 +91,28 @@ final class KDBXManagerTests: XCTestCase {
         return mockManager
     }
     
+    func testEncryption() throws {
+        let manager = try helperCreateManager()
+        try manager.save(fileURL: helperRelativePath(path: "EncryptedPasswords.kdbx"), password: "butter")
+        
+        let managerFromEncrypted = try KDBXManager(password: "butter", fileURL: helperRelativePath(path: "EncryptedPasswords.kdbx"))
+        XCTAssertTrue(manager.xmlManager.meta?.isEqual(managerFromEncrypted.xmlManager.meta) ?? false)
+        XCTAssertTrue(manager.xmlManager.group?.isEqual(managerFromEncrypted.xmlManager.group) ?? false)
+        
+        try managerFromEncrypted.save(fileURL: helperRelativePath(path: "EncryptedPasswords2.kdbx"), password: "butter")
+        
+        let managerFromEncrypted2 = try KDBXManager(password: "butter", fileURL: helperRelativePath(path: "EncryptedPasswords2.kdbx"))
+        
+        XCTAssertTrue(managerFromEncrypted.xmlManager.meta?.isEqual(managerFromEncrypted2.xmlManager.meta) ?? false)
+        XCTAssertTrue(managerFromEncrypted.xmlManager.group?.isEqual(managerFromEncrypted2.xmlManager.group) ?? false)
+    }
+    
+    func testMockEncryption() throws {
+        let mockManager = try helperCreateMockManager()
+        
+        try mockManager.save(fileURL: helperRelativePath(path: "MockEncryptedPasswords.kdbx"), password: "butter")
+        let managerFromMockEncrypted = try KDBXManager(password: "butter", fileURL: helperRelativePath(path: "MockEncryptedPasswords.kdbx"))
+        XCTAssertTrue(mockManager.xmlManager.meta?.isEqual(managerFromMockEncrypted.xmlManager.meta) ?? false)
+        XCTAssertTrue(mockManager.xmlManager.group?.isEqual(managerFromMockEncrypted.xmlManager.group) ?? false)
+    }
 }

@@ -7,15 +7,20 @@
 
 import Foundation
 import CryptoSwift
+import Encryption
 
 public class ChaChaStream: StreamCipher {
     
-    private let chacha: ChaCha20
+    private var chacha: ChaCha20
+    private var key: Data
+    private var nonce: Data
     private var encryptOffset: Int = 0
     private var decryptOffset: Int = 0
     
     public init(key: Data, nonce: Data) throws {
         self.chacha = try ChaCha20(key: key.bytes, iv: nonce.bytes)
+        self.key = key
+        self.nonce = nonce
     }
     
     public func decrypt(encryptedData: Data) throws -> Data {
@@ -32,8 +37,16 @@ public class ChaChaStream: StreamCipher {
         let encryptedDataWithPad = try Data(chacha.encrypt(paddedData.bytes))
         let encryptedData = encryptedDataWithPad.subdata(in: encryptOffset..<encryptedDataWithPad.count)
         encryptOffset += data.bytes.count
-        
+
         return encryptedData
+    }
+    
+    public func refresh(key: Data, nonce: Data) throws {
+        self.key = key
+        self.nonce = nonce
+        self.encryptOffset = 0
+        self.decryptOffset = 0
+        self.chacha = try ChaCha20(key: key.bytes, iv: nonce.bytes)
     }
     
     public func reset() {

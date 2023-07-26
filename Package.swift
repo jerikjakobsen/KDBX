@@ -29,6 +29,7 @@ let package = Package(
             name: "StreamCiphers",
             dependencies: [
                 .product(name: "CryptoSwift", package: "CryptoSwift"),
+                "Encryption"
             ]
         ),
         .target(
