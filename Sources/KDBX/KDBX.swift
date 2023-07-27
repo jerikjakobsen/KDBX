@@ -11,7 +11,7 @@ import XML
 @available(iOS 13.0, *)
 @available(macOS 10.15, *)
 @available(macOS 13.0, *)
-class KDBX: NSObject {
+public class KDBX: NSObject {
     let header: KDBXHeader
     let body: KDBXBody
     let meta: MetaXML // Change this to one not XML
