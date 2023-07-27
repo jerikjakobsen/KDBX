@@ -9,38 +9,30 @@ import Foundation
 import CryptoKit
 import Encryption
 import Gzip
+import XML
 
 @available(iOS 13.0, *)
 @available(macOS 13.0, *)
 class KDBXBody: NSObject {
-    
-    let header: KDBXHeader
-    var innerEncryptedData: Data? // Encrypted Inner Header + XML Data
-    var innerDecryptedData: Data? // Decrypted Inner Header + XML Data
-    var XMLData: Data? // Decrypted XML Data
     var streamCipher: UInt32?
-    var streamKey: Data?
     var binary: Data?
     
-    public static func fromEncryptedStream(password: String, header: KDBXHeader, encryptedStream: InputStream) throws -> KDBXBody {
-        return try KDBXBody(password: password, header: header, encryptedStream: encryptedStream)
-    }
+    public var meta: MetaXML
+    public var group: GroupXML
     
-    public static func fromXMLStream(header: KDBXHeader, xmlStream: InputStream) throws -> KDBXBody {
-        let body = try KDBXBody(header: header)
-        let xmlData = try readAllData(from: xmlStream)
-        try body.loadXMLData(xmlData: xmlData)
-        return body
+    public static func fromEncryptedStream(_ encryptedStream: InputStream, header: KDBXHeader) throws -> KDBXBody {
+        return try KDBXBody(header: header, encryptedStream: encryptedStream)
     }
 
-    private init(password: String, header: KDBXHeader, encryptedStream: InputStream) throws {
-        self.header = header
-        super.init()
-        let deblockifiedData = try deblockifyData(stream: encryptedStream)
+    private init(header: KDBXHeader, encryptedStream: InputStream) throws {
+        guard let baseHMACKey = header.baseHMACKey else {
+            throw KDBXBodyError.HMACBaseKeyNil
+        }
+        let deblockifiedData = try KDBXBody.deblockifyData(stream: encryptedStream, baseHMACKey: baseHMACKey)
         
-        guard let key = self.header.encryptionKey else {throw KDBXBodyError.NoKey}
-        guard let encryptionIV = self.header.encryptionIV else {throw KDBXBodyError.NoEncryptionIV}
-        let cipher = try self.header.getCipher()
+        guard let key = header.encryptionKey else {throw KDBXBodyError.NoKey}
+        guard let encryptionIV = header.encryptionIV else {throw KDBXBodyError.NoEncryptionIV}
+        let cipher = try header.getCipher()
         guard let decryptedData = try decryptData(encryptedData: deblockifiedData, key: key, encryptionIV: encryptionIV, cipher: cipher) else {
             throw KDBXBodyError.DecryptionFailed
         }
@@ -54,11 +46,38 @@ class KDBXBody: NSObject {
         defer {
             decryptedInnerDataStream.close()
         }
-        try readInnerHeader(stream: decryptedInnerDataStream)
-        self.XMLData = try readAllData(from: decryptedInnerDataStream)
+        let innerHeader = try KDBXBody.readInnerHeader(stream: decryptedInnerDataStream)
+        self.streamCipher = innerHeader.streamCipher
+        self.binary = innerHeader.binary
+        let XMLData = try readAllData(from: decryptedInnerDataStream)
+        let xmlManager = try XMLManager(XMLData: XMLData, cipherKey: innerHeader.streamKey)
+        guard let meta = xmlManager.meta else {
+            throw KDBXBodyError.MetaNil
+        }
+        
+        guard let group = xmlManager.group else {
+            throw KDBXBodyError.GroupNil
+        }
+        self.meta = meta
+        self.group = group
+        
     }
     
-    func getBlock(stream: InputStream, index: UInt64) throws -> Data? {
+    public init(title: String = "", description: String = "") {
+        self.streamCipher = DefaultValues.StreamCipherID
+        self.meta = MetaXML(databaseName: title, databaseDescription: description)
+        self.group = GroupXML(name: "Root")
+    }
+    
+    func loadMeta(_ meta: MetaXML) {
+        self.meta = meta
+    }
+    
+    func loadGroup(_ group: GroupXML) {
+        self.group = group
+    }
+    
+    static func getBlockContent(stream: InputStream, index: UInt64, baseHMACKey: Data) throws -> Data? {
         let blockSignature: Data = try stream.readNBytes(n: 32)
         let blockLength: Data = try stream.readNBytes( n: 4)
         let n: UInt32 = blockLength.toUnsignedInteger()
@@ -69,7 +88,7 @@ class KDBXBody: NSObject {
         let blockContent = try stream.readNBytes( n: Int(n))
         
         // Check if HMAC Signature is the same
-        let blockKey = try HMACKeyForBlockIndex(index: index, baseHMACKey: self.header.baseHMACKey)
+        let blockKey = try HMACKeyForBlockIndex(index: index, baseHMACKey: baseHMACKey)
         let derivedHMACSignature = Data(HMAC<SHA256>.authenticationCode(for: (index.data + Data(blockLength) + Data(blockContent)), using: SymmetricKey(data: blockKey)))
         guard derivedHMACSignature == Data(blockSignature) else {
             throw KDBXBodyError.DataCompromised
@@ -77,7 +96,7 @@ class KDBXBody: NSObject {
         return blockContent
     }
     
-    func deblockifyData(stream: InputStream) throws -> Data {
+    static func deblockifyData(stream: InputStream, baseHMACKey: Data) throws -> Data {
         if (stream.streamStatus == .notOpen) {
             stream.open()
         }
@@ -87,7 +106,7 @@ class KDBXBody: NSObject {
         var i: UInt64 = 0
         var blocks = Data()
         while (stream.hasBytesAvailable) {
-            guard let blockContent = try getBlock(stream: stream, index: i) else {
+            guard let blockContent = try getBlockContent(stream: stream, index: i, baseHMACKey: baseHMACKey) else {
                 return blocks
             }
             
@@ -97,7 +116,7 @@ class KDBXBody: NSObject {
         return blocks
     }
     
-    func readTLV(stream: InputStream) throws -> (type: UInt8, size: UInt32?, data: Data?) {
+    static func readTLV(stream: InputStream) throws -> (type: UInt8, size: UInt32?, data: Data?) {
         let type = try stream.readNBytes(n: 1)
         let lengthData = try stream.readNBytes(n: 4)
         let length: UInt32 = lengthData.toUnsignedInteger()
@@ -109,55 +128,53 @@ class KDBXBody: NSObject {
         return (type: type[0], size: length, data: value)
     }
     
-    func readInnerHeader(stream: InputStream) throws {
+    static func readInnerHeader(stream: InputStream) throws -> (streamCipher: UInt32, streamKey: Data, binary: Data?) {
         var tlv = try readTLV(stream: stream)
+        var streamCipher: UInt32? = nil
+        var streamKey: Data? = nil
+        var binary: Data? = nil
         while (tlv.type > 0) {
             guard let d = tlv.data else {
                 throw KDBXBodyError.ParseError
             }
             switch (tlv.type) {
             case 1:
-                self.streamCipher = d.toUnsignedInteger()
+                streamCipher = d.toUnsignedInteger()
                 break
             case 2:
-                self.streamKey = d
+                streamKey = d
                 break
             case 3:
-                self.binary = d
+                binary = d
                 break
             default:
                 throw KDBXBodyError.UnknownInnerHeaderType
             }
             tlv = try readTLV(stream: stream)
         }
+        guard let SC = streamCipher else {
+            throw KDBXBodyError.StreamCipherNil
+        }
+        guard let SK = streamKey else {
+            throw KDBXBodyError.StreamKeyNil
+        }
+        return (SC, SK, binary)
     }
 
     // Save Section
-
-    init(header: KDBXHeader) throws {
-        self.header = header
-        super.init()
-    }
-    
-    func loadXMLData(xmlData: Data) throws {
-        self.XMLData = xmlData
-    }
     
     func createTLV(type: UInt8, data: Data) throws -> Data {
         let length = UInt32(data.count.magnitude).littleEndian.data.bytes
         return Data([type] + length + data.bytes)
     }
     
-    func createInnerHeader() throws -> Data {
+    func createInnerHeader(streamKey: Data) throws -> Data {
         var workingData = Data()
         guard let streamCipher = self.streamCipher?.data else {
             throw KDBXBodyError.StreamCipherNil
         }
         workingData += try createTLV(type: 1, data: streamCipher)
         
-        guard let streamKey = self.streamKey else {
-            throw KDBXBodyError.StreamKeyNil
-        }
         workingData += try createTLV(type: 2, data: streamKey)
         
         if let binaryData = self.binary {
@@ -185,16 +202,16 @@ class KDBXBody: NSObject {
         }
     }
 
-    func createBlock(content: Data, index: UInt64, blockSize: UInt32) throws -> Data {
+    func createBlock(content: Data, index: UInt64, blockSize: UInt32, baseHMACKey: Data) throws -> Data {
         guard blockSize >= content.count else {
             throw KDBXBodyError.ContentSizeTooLarge
         }
-        let blockKey = try HMACKeyForBlockIndex(index: index, baseHMACKey: self.header.baseHMACKey)
+        let blockKey = try HMACKeyForBlockIndex(index: index, baseHMACKey: baseHMACKey)
         let derivedHMACSignature = Data(HMAC<SHA256>.authenticationCode(for: (index.data + blockSize.data + content), using: SymmetricKey(data: blockKey)))
         return Data(derivedHMACSignature + blockSize.data + content) // Placeholder
     }
     
-    func convertToBlocks(content: Data) throws -> Data {
+    func convertToBlocks(content: Data, baseHMACKey: Data) throws -> Data {
         var blocks: Data = Data()
         var index: UInt64 = 0
         let blockSize: UInt32 = 1296
@@ -205,34 +222,44 @@ class KDBXBody: NSObject {
         }
         while (stream.hasBytesAvailable) {
             let bytes: Data = try stream.readNBytes(n: Int(blockSize))
-            blocks += try createBlock(content: bytes, index: index, blockSize: UInt32(bytes.count))
+            blocks += try createBlock(content: bytes, index: index, blockSize: UInt32(bytes.count), baseHMACKey: baseHMACKey)
             index += 1
         }
         
-        blocks += try createBlock(content: Data(), index: index, blockSize: 0)
+        blocks += try createBlock(content: Data(), index: index, blockSize: 0, baseHMACKey: baseHMACKey)
         return blocks
     }
     
-    func encrypt(writeStream: OutputStream) throws {
-        var workingData = try createInnerHeader()
+    func encrypt(header: KDBXHeader) throws -> Data {
+        let newStreamKey = try generateRandomBytes(size: 64)
         
-        guard let xmlData = self.XMLData else {
-            throw KDBXBodyError.InnerDecryptedDataNil
+        let hashedKey = Data(SHA512.hash(data: newStreamKey))
+        let key = hashedKey.prefix(32)
+        let nonce = hashedKey.subdata(in: 32..<(32 + 12))
+        
+        var workingData = try createInnerHeader(streamKey: newStreamKey)
+        
+        let xmlManager = XMLManager(meta: self.meta, group: self.group)
+        
+        guard let xmlData = try xmlManager.toXML(streamKey: key, nonce: nonce).data(using: .utf8) else {
+            throw KDBXBodyError.FailedToConvertXMLStringToData
         }
-        
         workingData += xmlData
         
-        if (self.header.compressionFlag ?? false) {
+        if (header.compressionFlag ?? false) {
             workingData = try workingData.gzipped()
         }
-        guard let key = self.header.encryptionKey else {throw KDBXBodyError.NoKey}
-        guard let encryptionIV = self.header.encryptionIV else {throw KDBXBodyError.NoEncryptionIV}
-        let cipher = try self.header.getCipher()
+        guard let key = header.encryptionKey else {throw KDBXBodyError.NoKey}
+        guard let encryptionIV = header.encryptionIV else {throw KDBXBodyError.NoEncryptionIV}
+        let cipher = try header.getCipher()
         workingData = try encryptData(decryptedData: workingData, key: key, encryptionIV: encryptionIV, cipher: cipher)
         
-        // split it blocks
-        workingData = try convertToBlocks(content: workingData)
+        guard let baseHMACKey = header.baseHMACKey else {
+            throw KDBXBodyError.HMACBaseKeyNil
+        }
         
-        try _writeNBytes(stream: writeStream, data: workingData)
+        workingData = try convertToBlocks(content: workingData, baseHMACKey: baseHMACKey)
+        
+        return workingData
     }
 }

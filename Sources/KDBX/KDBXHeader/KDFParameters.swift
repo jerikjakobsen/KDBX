@@ -8,7 +8,7 @@
 import Foundation
 import Encryption
 
-struct KDFParameters {
+class KDFParameters {
     enum KeyDerivationAlgorithm {
         case AESKDF
         case Argon2d
@@ -77,10 +77,10 @@ struct KDFParameters {
             fallthrough
         case .Argon2id:
             self.SArgon = try generateRandomBytes(size: 32)
-            self.P = 2
-            self.M = 67108864
-            self.V = 19
-            self.I = 19
+            self.P = DefaultValues.KDFParametersP
+            self.M = DefaultValues.KDFParametersM
+            self.V = DefaultValues.KDFParametersV
+            self.I = DefaultValues.KDFParametersI
             self.K = nil
             self.A = nil
         case .Unknown:
@@ -88,6 +88,12 @@ struct KDFParameters {
         default:
             throw KDFParametersError.IllegalValue
         }
+    }
+    
+    public func refresh() throws {
+        let SSeed = try generateRandomBytes(size: 32)
+        self.S = SSeed
+        self.SArgon = SSeed
     }
     
     init(variantMap: [String: Any]) throws {
@@ -135,12 +141,6 @@ struct KDFParameters {
                 self.A = aT
             }
         }
-    }
-    
-    public func updateSeeds() throws -> KDFParameters {
-        let SSeed = try generateRandomBytes(size: 32)
-        
-        return KDFParameters(UUID: UUID, keyType: keyType, R: R, S: SSeed, SArgon: SSeed, P: P, M: M, I: I, V: V, K: K, A: A)
     }
     
     public func encodeVariantMap() throws -> Data {

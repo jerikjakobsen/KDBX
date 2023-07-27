@@ -58,6 +58,11 @@ public class XMLManager: NSObject {
         self.group?.modifyListener = self.meta
     }
     
+    public init(meta: MetaXML, group: GroupXML) {
+        self.meta = meta
+        self.group = group
+    }
+    
 //    public func modifyMeta(databaseName: String? = nil, databaseDescription: String? = nil) {
 //        self.meta = self.meta?.modify(newDatabaseName: databaseName, newDatabaseDescription: databaseDescription)
 //    }

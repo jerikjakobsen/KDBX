@@ -22,19 +22,13 @@ enum Cipher {
 class KDBXHeader {
     var cipherID: Data? = nil
     var compressionFlag: Bool? = nil
-    var masterSeed: Data? = nil
-    var transformSeed: Data? = nil
-    var transfromRounds: Int? = nil
-    var streamStartBytes: Data? = nil
-    var innerRandomStreamID: Data? = nil
-    var encryptionIV: Data? = nil
-    var kdfParameters: KDFParameters? = nil
-    var publicCustomData: [String: Any]? = nil
-    var headerSignature: Data? = nil
-    var headerBytes: Data? = nil
-    var HMACKey: Data? = nil
-    public var encryptionKey: Data? = nil
-    public var baseHMACKey: Data? = nil
+    private var masterSeed: Data? = nil
+    private(set) var encryptionIV: Data? = nil
+    private var kdfParameters: KDFParameters? = nil
+    private(set) var encryptionKey: Data? = nil
+    var baseHMACKey: Data? = nil
+    private var headerBytes: Data? = nil
+    
     static let signature1: UInt32 = 0x9AA2D903
     static let signature2: UInt32 = 0xB54BFB67
     static let kdbxVMinor: UInt16 = 1
@@ -69,45 +63,12 @@ class KDBXHeader {
         case Unknown = 0x88
     }
     
-    enum KDBXHeaderError: Error {
-        case SignatureParse
-        case WrongSignature
-        case VersionParse
-        case WrongMajorVersion
-        case ParseLength
-        case ParseCode
-        case ParseValue
-        case IllegalValue
-        case VariantMapParse
-        case ReadHeaderHash
-        case ReadHeaderSignatureHash
-        case HashNotEqual
-        case ReadHeaderBytes
-        case NoCipherID
-        case NoWriteSpace
-        case StreamWriteError
-        case UnableToGetPointerAddress
-        case UnexpectedNil
-        case UnknownCipher
-        case NoArgonSalt
-        case NoArgonIterations
-        case NoArgonMemory
-        case NoArgonParallelism
-        case NoArgonVersion
-        case NoAESSalt
-        case NoRounds
-        case NoMasterSeed
-        case KeyCreationUnsuccessful
-        case HMACBaseKeyNil
-        case HeaderBytesNil
-        case HeaderHMACHashNil
-        case ComputedHMACNotEqual
-    }
-    
     // From File
-    init(stream: InputStream, password: String) throws {
-        self.headerBytes = Data()
+    private init(stream: InputStream, password: String) throws {
         try parseOuterHeader(stream: stream)
+        guard let headerBytes = self.headerBytes else {
+            throw KDBXHeaderError.HeaderBytesNil
+        }
         guard let readHeaderHash = try _readNBytes(stream: stream, n: 32, saveBytes: false) else {
             throw KDBXHeaderError.ReadHeaderHash
         }
@@ -115,10 +76,8 @@ class KDBXHeader {
             throw KDBXHeaderError.ReadHeaderSignatureHash
         }
         let readHMACHashData = Data(readhmacHash)
-        guard let rawHeaderBytes = self.headerBytes else {
-            throw KDBXHeaderError.ReadHeaderBytes
-        }
-        let computedHash = Data(SHA256.hash(data: Data(rawHeaderBytes)))
+
+        let computedHash = Data(SHA256.hash(data: Data(headerBytes)))
         guard computedHash == Data(readHeaderHash) else {
             throw KDBXHeaderError.HashNotEqual
         }
@@ -127,14 +86,29 @@ class KDBXHeader {
         guard try computeHMACSignature() == readHMACHashData else {
             throw KDBXHeaderError.ComputedHMACNotEqual
         }
+        
+        // These should be set before accessing again (ie for encrypting body to file)
+        self.headerBytes = nil
+        self.masterSeed = nil
     }
     
-    init(password: String) throws {
+    public static func fromStream(_ stream: InputStream, password: String) throws -> KDBXHeader {
+        return try KDBXHeader(stream: stream, password: password)
+    }
+    
+    public init() throws {
         self.cipherID = hexStringToData(DefaultValues.CipherID)
 
-        self.compressionFlag = true
+        self.compressionFlag = DefaultValues.CompressionFlag
 
         self.kdfParameters = try KDFParameters()
+    }
+    
+    public func refresh(password: String) throws {
+        try self.kdfParameters?.refresh()
+        self.masterSeed = try generateRandomBytes(size: 32)
+        self.encryptionIV = try generateRandomBytes(size: 16)
+        try self.computeKeys(password: password)
     }
     
     func computeKeys(password: String) throws {
@@ -401,11 +375,7 @@ class KDBXHeader {
             }
             break
         case.PublicCustomData:
-            do {
-                self.publicCustomData = try _readVariantMap(stream: stream)
-            } catch {
-                throw error
-            }
+            try _readVariantMap(stream: stream)
             break
         case .EndOfHeader:
             return false
@@ -460,7 +430,8 @@ class KDBXHeader {
     
     // MARK: Write Portion of the header file
     
-    func writeOuterHeader(stream: OutputStream, password: String) throws {
+    func convertToData(password: String) throws -> Data {
+        try self.refresh(password: password)
         var headerBytes = Data()
         headerBytes += KDBXHeader.signature1.data // 4
         headerBytes += KDBXHeader.signature2.data // 4
@@ -473,15 +444,16 @@ class KDBXHeader {
         let compressionValue = Data([boolToUInt8(value: self.compressionFlag) ?? UInt8(1)]).rightPadded(to: 4)
         headerBytes += try createTLV(type: HeaderTypeCode.CompressionFlags.rawValue, data: compressionValue) // 5 + 4 = 9
         
-        let randomMainSeed = try generateRandomBytes(size: 32)
-        self.masterSeed = randomMainSeed
-        headerBytes += try createTLV(type: HeaderTypeCode.MasterSeed.rawValue, data: randomMainSeed)
+        guard let masterSeed = self.masterSeed else {
+            throw KDBXHeaderError.NoMasterSeed
+        }
+        headerBytes += try createTLV(type: HeaderTypeCode.MasterSeed.rawValue, data: masterSeed)
         
-        let randomEncryptionIV = try generateRandomBytes(size: 16)
-        self.encryptionIV = randomEncryptionIV
-        headerBytes += try createTLV(type: HeaderTypeCode.EncryptionIV.rawValue, data: randomEncryptionIV)
+        guard let encryptionIV = self.encryptionIV else {
+            throw KDBXHeaderError.NoEncryptionIV
+        }
+        headerBytes += try createTLV(type: HeaderTypeCode.EncryptionIV.rawValue, data: encryptionIV)
         
-        self.kdfParameters = try self.kdfParameters?.updateSeeds()
         guard let kdfparamsEncoding = try self.kdfParameters?.encodeVariantMap() else {
             throw KDBXHeaderError.UnexpectedNil
         }
@@ -490,18 +462,19 @@ class KDBXHeader {
         let endHeader: Data = Data([0x0d, 0x0a, 0x0d, 0x0a])
         headerBytes += try createTLV(type: 0, data: endHeader)
         
-        self.headerBytes = headerBytes
-        
         var hashes = Data()
         
         try self.computeKeys(password: password)
         let computedHash = Data(SHA256.hash(data: Data(headerBytes)))
         hashes += computedHash
         
-        let computedHMacSignature = try computeHMACSignature()
+        let computedHMacSignature = try computeHMACSignature(headerBytes: headerBytes)
         hashes += computedHMacSignature
         
-        try _writeNBytes(stream: stream, data: headerBytes + hashes, saveBytes: false)
+        self.masterSeed = nil
+        self.headerBytes = nil
+        
+        return headerBytes + hashes
     }
     
     func createTLV(type: UInt8, data: Data) throws -> Data {
@@ -521,6 +494,9 @@ class KDBXHeader {
     func _readNBytes(stream: InputStream, n: Int, saveBytes: Bool = true) throws -> Data? {
         let data = try stream.readNBytes(n: n)
         if (saveBytes) {
+            if (self.headerBytes == nil) {
+                self.headerBytes = Data()
+            }
             self.headerBytes?.append(data)
         }
         return data

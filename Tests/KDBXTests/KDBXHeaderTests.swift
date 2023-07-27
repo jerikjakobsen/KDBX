@@ -26,7 +26,7 @@ final class KDBXHeaderTests: XCTestCase {
             let stream: InputStream? = InputStream(url: fileURL)
             XCTAssertNotNil(stream)
             stream!.open()
-            let header = try KDBXHeader(stream: stream!, password: "butter")
+            let header = try KDBXHeader.fromStream(stream!, password: "butter")
             XCTAssertNotNil(header)
             let cipherID = "0x31C1F2E6BF714350BE5805216AFC5AFF"
             let compressionFlag = true
@@ -35,31 +35,10 @@ final class KDBXHeaderTests: XCTestCase {
             XCTAssertNotNil(header.cipherID)
             XCTAssertEqual(cipherID, header.cipherID!.toHexString())
             XCTAssertNotNilAndEqual(header.compressionFlag, compressionFlag, "Compression flag not equal")
-            XCTAssertNotNil(header.masterSeed)
-            XCTAssertEqual(header.masterSeed?.count, masterSeedLength)
+            XCTAssertNotNil(header.encryptionKey)
+            XCTAssertEqual(header.encryptionKey?.count, masterSeedLength)
             XCTAssertEqual(header.encryptionIV?.count, encryptionIVLength)
-            AssertKDFParametersHelper(kdfParameters: header.kdfParameters)
             stream?.close()
-        }
-    }
-    
-    func AssertKDFParametersHelper(kdfParameters: KDFParameters?) {
-        let UUID = "0xEF636DDF8C29444B91F7A9A403E30A0C"
-        let saltLength = 32
-        let P: UInt32 = 2
-        let M: UInt64 = 67108864
-        let I: UInt64 = 19
-        let V: UInt32 = 19
-        XCTAssertNotNil(kdfParameters)
-        if let params = kdfParameters {
-            XCTAssertNotNil(params.UUID)
-            XCTAssertEqual(params.UUID.toHexString(), UUID)
-            XCTAssertNotNil(params.SArgon)
-            XCTAssertEqual(params.SArgon?.count, saltLength)
-            XCTAssertNotNilAndEqual(params.P, P)
-            XCTAssertNotNilAndEqual(params.M, M)
-            XCTAssertNotNilAndEqual(params.I, I)
-            XCTAssertNotNilAndEqual(params.V, V)
         }
     }
     
@@ -73,14 +52,10 @@ final class KDBXHeaderTests: XCTestCase {
     @available(iOS 13.0, *)
     @available(macOS 13.0, *)
     func testEncodeHeader() throws {
-        let header = try KDBXHeader(password: "butter")
-        let dataStream = OutputStream(toMemory: ())
-        try header.writeOuterHeader(stream: dataStream, password: "butter")
-        let attemptedHeaderBytes = dataStream.property(forKey: .dataWrittenToMemoryStreamKey)! as! Data
-        dataStream.close()
-        let readStream = InputStream(data: attemptedHeaderBytes)
-        let headerFromWrite = try KDBXHeader(stream: readStream, password: "butter")
-        readStream.close()
-        // If it doesn't throw an error, test passed
+        let header = try KDBXHeader()
+        let attemptedHeaderData = try header.convertToData(password: "butter")
+        let readStream = InputStream(data: attemptedHeaderData)
+        let headerFromWrite = try KDBXHeader.fromStream(readStream, password: "butter")
+        XCTAssertEqual(header.cipherID, headerFromWrite.cipherID)
     }
 }

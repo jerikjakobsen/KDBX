@@ -77,6 +77,11 @@ public final class MetaXML: NSObject, XMLObjectDeserialization, Serializable, Mo
     public func setDBName(name: String) {
         self.databaseName.content = name
     }
+    
+    public func setGenerator(_ generator: String) {
+        self.generator.content = generator
+    }
+    
     public func getDBName() -> String {
         return self.databaseName.content
     }
