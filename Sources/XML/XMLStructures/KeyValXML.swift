@@ -96,7 +96,7 @@ public final class KeyValXML: NSObject, XMLObjectDeserialization, Serializable, 
     }
 }
 
-@available(iOS 13.0, *)
+@available(iOS 15.0, *)
 @available(macOS 13.0, *)
 extension KeyValXML: CustomStringConvertible {
     public override var description: String {
