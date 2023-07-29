@@ -18,7 +18,7 @@ enum KeyValError: Error {
     case DataToStringNil
 }
 
-@available(iOS 13.0, *)
+@available(iOS 15.0, *)
 @available(macOS 13.0, *)
 public final class KeyValXML: NSObject, XMLObjectDeserialization, Serializable, ModifyListener {
     var key: XMLString

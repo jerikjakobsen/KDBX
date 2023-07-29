@@ -9,7 +9,7 @@ import Foundation
 import SWXMLHash
 import StreamCiphers
 
-@available(iOS 13.0, *)
+@available(iOS 15.0, *)
 @available(macOS 13.0, *)
 public final class MetaXML: NSObject, XMLObjectDeserialization, Serializable, ModifyListener {
     

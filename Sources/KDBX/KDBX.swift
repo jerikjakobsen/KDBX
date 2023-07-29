@@ -8,7 +8,7 @@
 import Foundation
 import XML
 
-@available(iOS 13.0, *)
+@available(iOS 15.0, *)
 @available(macOS 10.15, *)
 @available(macOS 13.0, *)
 public class KDBX: NSObject {
