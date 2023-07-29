@@ -11,7 +11,7 @@ import Encryption
 import Gzip
 import XML
 
-@available(iOS 13.0, *)
+@available(iOS 15.0, *)
 @available(macOS 13.0, *)
 class KDBXBody: NSObject {
     var streamCipher: UInt32?
