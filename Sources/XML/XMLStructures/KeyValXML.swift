@@ -21,8 +21,8 @@ enum KeyValError: Error {
 @available(iOS 15.0, *)
 @available(macOS 13.0, *)
 public final class KeyValXML: NSObject, XMLObjectDeserialization, Serializable, ModifyListener {
-    var key: XMLString
-    var value: XMLString
+    public var key: XMLString
+    public var value: XMLString
     public let name: String
     internal var modifyListener: ModifyListener? = nil
     

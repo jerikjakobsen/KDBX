@@ -14,8 +14,8 @@ import XML
 public class KDBX: NSObject {
     let header: KDBXHeader
     let body: KDBXBody
-    let meta: MetaXML // Change this to one not XML
-    let group: GroupXML // Change this to one not XML
+    public let meta: MetaXML // Change this to one not XML
+    public let group: GroupXML // Change this to one not XML
     
     //Default Constructor, For Initializing New Database
     public init(title: String, description: String = "") throws {
