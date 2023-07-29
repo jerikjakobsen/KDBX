@@ -9,7 +9,7 @@ import Foundation
 import StreamCiphers
 import SWXMLHash
 
-@available(iOS 13.0, *)
+@available(iOS 15.0, *)
 @available(macOS 13.0, *)
 public final class GroupXML: NSObject, XMLObjectDeserialization, Serializable {
     public let UUID: XMLString

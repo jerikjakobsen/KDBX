@@ -12,7 +12,7 @@ import StreamCiphers
 enum DateError: Error {
     case DateDecoding
 }
-@available(iOS 13.0, *)
+@available(iOS 15.0, *)
 @available(macOS 13.0, *)
 public final class TimesXML: XMLObjectDeserialization, Serializable {
     var lastModificationTime: Date?

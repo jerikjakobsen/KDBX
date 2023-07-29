@@ -17,7 +17,7 @@ enum XMLStringError: Error {
     
 }
 
-@available(iOS 13.0, *)
+@available(iOS 15.0, *)
 @available(macOS 13.0, *)
 public final class XMLString: NSObject, XMLValueDeserialization, Serializable {
     

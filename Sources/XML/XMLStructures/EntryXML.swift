@@ -13,7 +13,7 @@ enum EntryXMLError: Error {
     case NoTitleFound
 }
 
-@available(iOS 13.0, *)
+@available(iOS 15.0, *)
 @available(macOS 13.0, *)
 public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, ModifyListener {
     public var KeyVals: [KeyValXML]
