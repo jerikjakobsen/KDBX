@@ -23,6 +23,17 @@ public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, M
     public var name: XMLString
     internal var modifyListener: ModifyListener?
     
+    public lazy var email: String? = {
+        return getValueWith(key: "Email")
+    }()
+    
+    public lazy var username: String? = {
+        return getValueWith(key: "Username")
+    }()
+    public lazy var password: String? = {
+        return getValueWith(key: "Password")
+    }()
+    
     internal init(KeyVals: [KeyValXML], UUID: XMLString, iconID: XMLString, times: TimesXML, name: XMLString) {
         self.KeyVals = KeyVals
         self.UUID = UUID
@@ -38,9 +49,9 @@ public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, M
     }
     
     public init(iconID: String = "0", keyVals: [KeyValXML] = [], expires: Bool = false, expiryTime: Date? = nil, name: String) {
-        let uuidXMLString = XMLString(content: Foundation.UUID().uuidString, name: "UUID")
-        let iconIDXMLString: XMLString = XMLString(content: iconID, name: "IconID")
-        let entryNameXMLString = XMLString(content: name, name: "EntryName")
+        let uuidXMLString = XMLString(value: Foundation.UUID().uuidString, name: "UUID")
+        let iconIDXMLString: XMLString = XMLString(value: iconID, name: "IconID")
+        let entryNameXMLString = XMLString(value: name, name: "EntryName")
         
         self.KeyVals = keyVals
         self.UUID = uuidXMLString
@@ -60,19 +71,19 @@ public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, M
         var entryNameXMLString: XMLString? = try? element["EntryName"].value()
         if entryNameXMLString == nil {
             let titleKeyVal = keyVals.filter({ kv in
-                return kv.key.content == "Title"
+                return kv.key.value == "Title"
             })
             
             if titleKeyVal.count == 0 {
                 throw EntryXMLError.NoTitleFound
             }
             
-            let name = titleKeyVal[0].value.content
+            let name = titleKeyVal[0].value.value
             
             keyVals = keyVals.filter({ kv in
-                return kv.key.content != "Title"
+                return kv.key.value != "Title"
             })
-            entryNameXMLString = XMLString(content: name, name: "EntryName")
+            entryNameXMLString = XMLString(value: name, name: "EntryName")
         }
         
         guard let entryName = entryNameXMLString else {
@@ -95,19 +106,19 @@ public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, M
         var entryNameXMLString: XMLString? = try? element["EntryName"].value()
         if entryNameXMLString == nil {
             let titleKeyVal = keyVals.filter({ kv in
-                return kv.key.content == "Title"
+                return kv.key.value == "Title"
             })
             
             if titleKeyVal.count == 0 {
                 throw EntryXMLError.NoTitleFound
             }
             
-            let name = titleKeyVal[0].value.content
+            let name = titleKeyVal[0].value.value
             keyVals = keyVals.filter({ kv in
-                return kv.key.content != "Title"
+                return kv.key.value != "Title"
             })
             
-            entryNameXMLString = XMLString(content: name, name: "EntryName")
+            entryNameXMLString = XMLString(value: name, name: "EntryName")
         }
         
         guard let entryName = entryNameXMLString else {
@@ -155,7 +166,7 @@ public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, M
     
     public func removeKeyVal(key: String) {
         self.KeyVals.removeAll { kv in
-            return kv.key.content != key
+            return kv.key.value != key
         }
         let updateDate: Date = Date.now
         self.times.update(modified: true, date: updateDate)
@@ -167,19 +178,19 @@ public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, M
     }
     
     func setName(name: String) {
-        self.name.content = name
+        self.name.value = name
     }
     
     func getName() -> String {
-        return self.name.content
+        return self.name.value
     }
     
     func setIconID(iconID: String) {
-        self.iconID.content = iconID
+        self.iconID.value = iconID
     }
     
     func getIconID() -> String {
-        return self.iconID.content
+        return self.iconID.value
     }
     
     public func isEqual(_ object: EntryXML?) -> Bool {
@@ -212,6 +223,16 @@ public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, M
         }.joined(separator: "\n")
         return "KeyVals: [\(keyValsStr)]\niconID: \(iconID)\nname: \(name)\n"
     }
+    
+    public func getValueWith(key: String) -> String? {
+        for kv in KeyVals {
+            if kv.key.value == key {
+                return kv.value.value
+            }
+        }
+        return nil
+    }
+    
 }
 
 

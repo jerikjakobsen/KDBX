@@ -79,7 +79,7 @@ public final class TimesXML: XMLObjectDeserialization, Serializable {
         
         return try """
 <Times>
-    \(timeOffset != nil ? XMLString(content: String(timeOffset!), name: "TimeOffset").serialize() : "")
+    \(timeOffset != nil ? XMLString(value: String(timeOffset!), name: "TimeOffset").serialize() : "")
     <LastModificationTime>\(lmtString)</LastModificationTime>
     <CreationTime>\(ctString)</CreationTime>
     <LastAccessTime>\(latString)</LastAccessTime>

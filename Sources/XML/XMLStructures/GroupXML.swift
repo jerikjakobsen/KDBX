@@ -40,9 +40,9 @@ public final class GroupXML: NSObject, XMLObjectDeserialization, Serializable {
     }
     
     public init(name: String = "Root", iconID: String = "0", entries: [EntryXML] = [], expires: Bool = false, expiryTime: Date? = nil) {
-        self.UUID = XMLString(content: Foundation.UUID().uuidString, name: "UUID")
-        self.name = XMLString(content: name, name: "Name")
-        self.iconID = XMLString(content: iconID, name: "IconID")
+        self.UUID = XMLString(value: Foundation.UUID().uuidString, name: "UUID")
+        self.name = XMLString(value: name, name: "Name")
+        self.iconID = XMLString(value: iconID, name: "IconID")
         self.times =  TimesXML.now(expires: expires, expiryTime: expiryTime)
         self.entries = entries
     }
@@ -87,7 +87,7 @@ public final class GroupXML: NSObject, XMLObjectDeserialization, Serializable {
     
     public func removeEntry(UUID: String) {
         self.entries.removeAll { entry in
-            return entry.UUID.content != UUID
+            return entry.UUID.value != UUID
         }
         
         let updateDate: Date = Date.now
@@ -96,19 +96,19 @@ public final class GroupXML: NSObject, XMLObjectDeserialization, Serializable {
     }
     
     public func setName(name: String) {
-        self.name.content = name
+        self.name.value = name
     }
     
     public func getName() -> String {
-        return self.name.content
+        return self.name.value
     }
     
     public func setIconID(iconID: String) {
-        self.iconID.content = iconID
+        self.iconID.value = iconID
     }
     
     public func getIconID() -> String? {
-        return self.iconID.content
+        return self.iconID.value
     }
     
     public func getEntries() -> [EntryXML] {

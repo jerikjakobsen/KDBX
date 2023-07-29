@@ -27,8 +27,8 @@ public final class KeyValXML: NSObject, XMLObjectDeserialization, Serializable, 
     internal var modifyListener: ModifyListener? = nil
     
     public init(key: String, value: String, name: String = "String", protected: Bool = false) {
-        self.key = XMLString(content: key, name: "Key")
-        self.value = XMLString(content: value, name: "Value", properties: protected ? ["Protected": "True"] : [:])
+        self.key = XMLString(value: key, name: "Key")
+        self.value = XMLString(value: value, name: "Value", properties: protected ? ["Protected": "True"] : [:])
         self.name = name
         super.init()
         self.key.modifyListener = self
@@ -65,7 +65,7 @@ public final class KeyValXML: NSObject, XMLObjectDeserialization, Serializable, 
         }
         let key: XMLString = try XMLString.deserialize(keyElement)
         
-        let val: XMLString = try XMLString.deserialize(valElement, base64Encoded: isBase64Encoded(key: key.content), streamCipher: streamCipher)
+        let val: XMLString = try XMLString.deserialize(valElement, base64Encoded: isBase64Encoded(key: key.value), streamCipher: streamCipher)
         
         return KeyValXML(
             key: key,
@@ -74,7 +74,7 @@ public final class KeyValXML: NSObject, XMLObjectDeserialization, Serializable, 
     }
     
     public func serialize(base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) throws -> String {
-        let b64encoded = base64Encoded || KeyValXML.isBase64Encoded(key: key.content)
+        let b64encoded = base64Encoded || KeyValXML.isBase64Encoded(key: key.value)
         
         return try """
             <\(name)>

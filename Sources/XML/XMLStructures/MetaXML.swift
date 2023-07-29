@@ -37,9 +37,9 @@ public final class MetaXML: NSObject, XMLObjectDeserialization, Serializable, Mo
     }
     
     public init(generator: String = "Keys", databaseName: String, databaseDescription: String, color: ColorXML? = nil) {
-        self.generator = XMLString(content: generator, name: "Generator")
-        self.databaseName = XMLString(content: databaseName, name: "DatabaseName")
-        self.databaseDescription = XMLString(content: databaseDescription, name: "DatabaseDescription")
+        self.generator = XMLString(value: generator, name: "Generator")
+        self.databaseName = XMLString(value: databaseName, name: "DatabaseName")
+        self.databaseDescription = XMLString(value: databaseDescription, name: "DatabaseDescription")
         self.times = TimesXML.now(expires: false, expiryTime: nil)
         self.color = color
         super.init()
@@ -75,23 +75,23 @@ public final class MetaXML: NSObject, XMLObjectDeserialization, Serializable, Mo
     }
     
     public func setDBName(name: String) {
-        self.databaseName.content = name
+        self.databaseName.value = name
     }
     
     public func setGenerator(_ generator: String) {
-        self.generator.content = generator
+        self.generator.value = generator
     }
     
     public func getDBName() -> String {
-        return self.databaseName.content
+        return self.databaseName.value
     }
     
     public func setDBDescription(description: String) {
-        self.databaseDescription.content = description
+        self.databaseDescription.value = description
     }
     
     public func getDBDescription() -> String {
-        return self.databaseDescription.content
+        return self.databaseDescription.value
     }
     
     public func didModify(date: Date) {

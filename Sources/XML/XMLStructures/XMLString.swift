@@ -21,7 +21,7 @@ enum XMLStringError: Error {
 @available(macOS 13.0, *)
 public final class XMLString: NSObject, XMLValueDeserialization, Serializable {
     
-    public var content: String {
+    public var value: String {
         didSet {
             self.modifyListener?.didModify(date: Date.now)
         }
@@ -34,8 +34,8 @@ public final class XMLString: NSObject, XMLValueDeserialization, Serializable {
     public var properties: [String: String] = [:]
     internal var modifyListener: ModifyListener?
     
-    public init(content: String, name: String, properties: [String : String] = [:]) {
-        self.content = content
+    public init(value: String, name: String, properties: [String : String] = [:]) {
+        self.value = value
         self.name = name
         self.properties = properties
     }
@@ -44,10 +44,10 @@ public final class XMLString: NSObject, XMLValueDeserialization, Serializable {
         let attributes = element.allAttributes.mapValues { attr in
             return attr.text
         }
-        return XMLString(content: element.text, name: element.name, properties: attributes)
+        return XMLString(value: element.text, name: element.name, properties: attributes)
     }
     public static func deserialize(_ attribute: SWXMLHash.XMLAttribute) throws -> XMLString {
-        return XMLString(content: attribute.text, name: attribute.name, properties: [:])
+        return XMLString(value: attribute.text, name: attribute.name, properties: [:])
     }
     static func deserialize(_ element: SWXMLHash.XMLElement, base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) throws -> XMLString {
         
@@ -74,7 +74,7 @@ public final class XMLString: NSObject, XMLValueDeserialization, Serializable {
         let attributes = element.allAttributes.mapValues { attr in
             return attr.text
         }
-        return XMLString(content: strVal, name: element.name, properties: attributes)
+        return XMLString(value: strVal, name: element.name, properties: attributes)
     }
     
     private func propertiesXMLize() -> String {
@@ -89,7 +89,7 @@ public final class XMLString: NSObject, XMLValueDeserialization, Serializable {
     
     public func serialize(base64Encoded: Bool = false, streamCipher: StreamCipher? = nil) throws -> String {
         
-        guard var strData = content.data(using: .utf8) else {
+        guard var strData = value.data(using: .utf8) else {
             throw XMLStringError.StringToDataNil
         }
         
@@ -113,9 +113,9 @@ public final class XMLString: NSObject, XMLValueDeserialization, Serializable {
         guard let notNil = object else {
             return false
         }
-        return notNil.content == content && notNil.name == name && notNil.properties == properties
+        return notNil.value == value && notNil.name == name && notNil.properties == properties
     }
     public override var description: String {
-        return "<\(name)\(propertiesXMLize())>\(content)</\(name)>"
+        return "<\(name)\(propertiesXMLize())>\(value)</\(name)>"
     }
 }
