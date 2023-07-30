@@ -36,6 +36,14 @@ public class KDBX: NSObject {
         return try await KDBX(stream, password: password)
     }
     
+    public static func fromEncryptedData(_ data: Data, password: String) async throws -> KDBX {
+        let readStream = InputStream(data: data)
+        readStream.open()
+        let kdbx = try await KDBX(readStream, password: password)
+        readStream.close()
+        return kdbx
+    }
+    
     public func encryptToStream(_ stream: OutputStream, password: String) async throws {
         self.body.loadMeta(self.meta)
         self.body.loadGroup(self.group)
@@ -43,4 +51,12 @@ public class KDBX: NSObject {
         try stream.write(data: self.header.convertToData(password: password))
         try stream.write(data: self.body.encrypt(header: self.header))
     }
+    
+    public func encryptToData(password: String) async throws -> Data {
+        self.body.loadMeta(self.meta)
+        self.body.loadGroup(self.group)
+        
+        return try (self.header.convertToData(password: password) + self.body.encrypt(header: self.header))
+    }
+    
 }
