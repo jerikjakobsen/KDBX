@@ -25,18 +25,18 @@ public class KDBX: NSObject {
         self.group = body.group
     }
     
-    private init(_ stream: InputStream, password: String) throws {
+    private init(_ stream: InputStream, password: String) async throws {
         self.header = try KDBXHeader.fromStream(stream, password: password)
         self.body = try KDBXBody.fromEncryptedStream(stream, header: header)
         self.meta = body.meta
         self.group = body.group
     }
     
-    public static func fromEncryptedStream(_ stream: InputStream, password: String) throws -> KDBX {
-        return try KDBX(stream, password: password)
+    public static func fromEncryptedStream(_ stream: InputStream, password: String) async throws -> KDBX {
+        return try await KDBX(stream, password: password)
     }
     
-    public func encryptToStream(_ stream: OutputStream, password: String) throws {
+    public func encryptToStream(_ stream: OutputStream, password: String) async throws {
         self.body.loadMeta(self.meta)
         self.body.loadGroup(self.group)
         
