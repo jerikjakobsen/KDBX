@@ -15,12 +15,12 @@ enum DateError: Error {
 @available(iOS 15.0, *)
 @available(macOS 13.0, *)
 public final class TimesXML: XMLObjectDeserialization, Serializable {
-    var lastModificationTime: Date?
-    let creationTime: Date?
-    var lastAccessedTime: Date?
-    var expires: Bool?
-    var expiryTime: Date?
-    var timeOffset: Int64?
+    public var lastModificationTime: Date?
+    public let creationTime: Date?
+    public var lastAccessedTime: Date?
+    public var expires: Bool?
+    public var expiryTime: Date?
+    public var timeOffset: Int64?
     
     init(lastModificationTime: Date? = nil, creationTime: Date? = nil, lastAccessedTime: Date? = nil, expires: Bool? = nil, expiryTime: Date? = nil, timeOffset: Int64? = nil) {
         self.lastModificationTime = lastModificationTime

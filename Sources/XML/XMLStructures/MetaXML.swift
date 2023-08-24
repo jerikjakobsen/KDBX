@@ -14,9 +14,9 @@ import StreamCiphers
 public final class MetaXML: NSObject, XMLObjectDeserialization, Serializable, ModifyListener {
     
     internal var generator: XMLString
-    internal var databaseName: XMLString
-    internal var databaseDescription: XMLString
-    internal var times: TimesXML
+    public var databaseName: XMLString
+    public var databaseDescription: XMLString
+    public var times: TimesXML
     public var color: ColorXML? {
         didSet {
             self.color?.modifyListener = self

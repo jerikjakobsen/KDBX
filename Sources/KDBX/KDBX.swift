@@ -25,6 +25,13 @@ public class KDBX: NSObject {
         self.group = body.group
     }
     
+    internal init(header: KDBXHeader, body: KDBXBody) {
+        self.header = header
+        self.body = body
+        self.meta = body.meta
+        self.group = body.group
+    }
+    
     private init(_ stream: InputStream, password: String) async throws {
         self.header = try KDBXHeader.fromStream(stream, password: password)
         self.body = try KDBXBody.fromEncryptedStream(stream, header: header)
@@ -60,3 +67,4 @@ public class KDBX: NSObject {
     }
     
 }
+

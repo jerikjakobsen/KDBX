@@ -13,21 +13,21 @@ import SWXMLHash
 @available(macOS 13.0, *)
 public final class GroupXML: NSObject, XMLObjectDeserialization, Serializable {
     public let UUID: XMLString
-    var name: XMLString {
+    public var name: XMLString {
         didSet {
             let updateDate: Date = Date.now
             self.times.update(modified: true, date: updateDate)
             self.modifyListener?.didModify(date: updateDate)
         }
     }
-    var iconID: XMLString  {
+    public var iconID: XMLString  {
         didSet {
             let updateDate: Date = Date.now
             self.times.update(modified: true, date: updateDate)
             self.modifyListener?.didModify(date: updateDate)
         }
     }
-    private var times: TimesXML
+    public var times: TimesXML
     public var entries: [EntryXML]
     internal var modifyListener: ModifyListener?
     

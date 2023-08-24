@@ -18,7 +18,7 @@ enum EntryXMLError: Error {
 public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, ModifyListener {
     public var KeyVals: [KeyValXML]
     public let UUID: XMLString
-    var iconID: XMLString
+    public var iconID: XMLString
     private var times: TimesXML
     public var name: XMLString
     internal var modifyListener: ModifyListener?
