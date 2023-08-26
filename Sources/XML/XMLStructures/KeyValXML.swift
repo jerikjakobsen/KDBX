@@ -20,7 +20,7 @@ enum KeyValError: Error {
 
 @available(iOS 15.0, *)
 @available(macOS 13.0, *)
-public final class KeyValXML: NSObject, XMLObjectDeserialization, Serializable, ModifyListener {
+public final class KeyValXML: NSObject, XMLObjectDeserialization, Serializable, ModifyListener, NSCopying {
     public var key: XMLString
     public var value: XMLString
     public let name: String
@@ -93,6 +93,10 @@ public final class KeyValXML: NSObject, XMLObjectDeserialization, Serializable, 
             return false
         }
         return notNil.key.isEqual(key) && notNil.value.isEqual(value) && notNil.name == name
+    }
+    
+    public override func copy() -> KeyValXML {
+        return KeyValXML(key: self.key.copy(), value: self.value.copy(), name: self.name)
     }
 }
 

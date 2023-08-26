@@ -19,7 +19,7 @@ enum XMLStringError: Error {
 
 @available(iOS 15.0, *)
 @available(macOS 13.0, *)
-public final class XMLString: NSObject, XMLValueDeserialization, Serializable {
+public final class XMLString: NSObject, XMLValueDeserialization, Serializable, NSCopying {
     
     public var value: String {
         didSet {
@@ -117,5 +117,10 @@ public final class XMLString: NSObject, XMLValueDeserialization, Serializable {
     }
     public override var description: String {
         return "<\(name)\(propertiesXMLize())>\(value)</\(name)>"
+    }
+    
+    public override func copy() -> XMLString {
+        let propertiesCopy = self.properties
+        return XMLString(value: self.value, name: self.name, properties: propertiesCopy)
     }
 }

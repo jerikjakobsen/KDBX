@@ -15,7 +15,7 @@ enum EntryXMLError: Error {
 
 @available(iOS 15.0, *)
 @available(macOS 13.0, *)
-public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, ModifyListener {
+public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, ModifyListener, NSCopying {
     public var KeyVals: [KeyValXML]
     public let UUID: XMLString
     public var iconID: XMLString
@@ -231,6 +231,12 @@ public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, M
             }
         }
         return nil
+    }
+    
+    public override func copy() -> EntryXML {
+        return EntryXML(KeyVals: self.KeyVals.map({ kv in
+            return kv.copy()
+        }), UUID: self.UUID.copy(), iconID: self.iconID.copy(), times: self.times.copy(), name: self.name.copy())
     }
     
 }

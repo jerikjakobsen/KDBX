@@ -14,7 +14,7 @@ enum DateError: Error {
 }
 @available(iOS 15.0, *)
 @available(macOS 13.0, *)
-public final class TimesXML: XMLObjectDeserialization, Serializable {
+public final class TimesXML: XMLObjectDeserialization, Serializable, NSCopying {
     public var lastModificationTime: Date?
     public let creationTime: Date?
     public var lastAccessedTime: Date?
@@ -98,5 +98,9 @@ public final class TimesXML: XMLObjectDeserialization, Serializable {
     
     public static func now(expires: Bool, expiryTime: Date? = nil) -> TimesXML {
         return TimesXML(lastModificationTime: Date.now, creationTime: Date.now, lastAccessedTime: Date.now, expires: expires, expiryTime: expiryTime, timeOffset: 0)
+    }
+    
+    public override func copy() -> TimesXML {
+        return TimesXML(lastModificationTime: self.lastModificationTime, creationTime: self.creationTime, lastAccessedTime: self.lastAccessedTime, expire: self.expires, expiryTime: self.expiryTime, timeOffset: self.timeOffset)
     }
 }
