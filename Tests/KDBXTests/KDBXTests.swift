@@ -55,10 +55,10 @@ class KDBXTests: XCTestCase {
             return mockDB
         }
     
-    func testKDBXFromRead() throws {
+    func testKDBXFromRead() async throws {
         let stream = InputStream(url: helperRelativePath(path: "EncryptedPasswords.kdbx"))
         stream?.open()
-        let kdbx = try KDBX.fromEncryptedStream(stream!, password: "butter")
+        let kdbx = try await KDBX.fromEncryptedStream(stream!, password: "butter")
         stream?.close()
         print(kdbx.meta)
         print(kdbx.group)
@@ -68,16 +68,16 @@ class KDBXTests: XCTestCase {
         XCTAssertTrue(mockDB.group.isEqual(kdbx.group))
     }
     
-    func testEncryption() throws {
+    func testEncryption() async throws {
         let mockKDBX = try helperCreateMockManager()
         let stream = OutputStream(url: helperRelativePath(path: "MockEncryptedPasswords.kdbx"), append: false)
         stream?.open()
-        try mockKDBX.encryptToStream(stream!, password: "butter")
+        try await mockKDBX.encryptToStream(stream!, password: "butter")
         stream?.close()
         
         let mockEncryptedStream = InputStream(url: helperRelativePath(path: "MockEncryptedPasswords.kdbx"))
         mockEncryptedStream?.open()
-        let mockKDBXFromEncryptedFile = try KDBX.fromEncryptedStream(mockEncryptedStream!, password: "butter")
+        let mockKDBXFromEncryptedFile = try await KDBX.fromEncryptedStream(mockEncryptedStream!, password: "butter")
         mockEncryptedStream?.close()
         XCTAssertTrue(mockKDBX.meta.isEqual(mockKDBXFromEncryptedFile.meta))
         XCTAssertTrue(mockKDBX.group.isEqual(mockKDBXFromEncryptedFile.group))

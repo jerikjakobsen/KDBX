@@ -95,8 +95,8 @@ public final class KeyValXML: NSObject, XMLObjectDeserialization, Serializable, 
         return notNil.key.isEqual(key) && notNil.value.isEqual(value) && notNil.name == name
     }
     
-    public override func copy() -> KeyValXML {
-        return KeyValXML(key: self.key.copy(), value: self.value.copy(), name: self.name)
+    public func copy(with zone: NSZone? = nil) -> Any {
+        return KeyValXML(key: self.key.copy() as! XMLString, value: self.value.copy() as! XMLString, name: self.name)
     }
 }
 

@@ -100,7 +100,7 @@ public final class TimesXML: XMLObjectDeserialization, Serializable, NSCopying {
         return TimesXML(lastModificationTime: Date.now, creationTime: Date.now, lastAccessedTime: Date.now, expires: expires, expiryTime: expiryTime, timeOffset: 0)
     }
     
-    public override func copy() -> TimesXML {
-        return TimesXML(lastModificationTime: self.lastModificationTime, creationTime: self.creationTime, lastAccessedTime: self.lastAccessedTime, expire: self.expires, expiryTime: self.expiryTime, timeOffset: self.timeOffset)
+    public func copy(with zone: NSZone? = nil) -> Any {
+        return TimesXML(lastModificationTime: self.lastModificationTime, creationTime: self.creationTime, lastAccessedTime: self.lastAccessedTime, expires: self.expires, expiryTime: self.expiryTime, timeOffset: self.timeOffset)
     }
 }

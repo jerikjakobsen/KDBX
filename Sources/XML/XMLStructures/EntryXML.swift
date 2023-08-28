@@ -47,6 +47,9 @@ public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, M
             kv.modifyListener = self
         }
     }
+    public convenience init(name: String) {
+        self.init(iconID: "0", name: name)
+    }
     
     public init(iconID: String = "0", keyVals: [KeyValXML] = [], expires: Bool = false, expiryTime: Date? = nil, name: String) {
         let uuidXMLString = XMLString(value: Foundation.UUID().uuidString, name: "UUID")
@@ -233,10 +236,10 @@ public final class EntryXML: NSObject, Serializable, XMLObjectDeserialization, M
         return nil
     }
     
-    public override func copy() -> EntryXML {
+    public func copy(with zone: NSZone? = nil) -> Any {
         return EntryXML(KeyVals: self.KeyVals.map({ kv in
-            return kv.copy()
-        }), UUID: self.UUID.copy(), iconID: self.iconID.copy(), times: self.times.copy(), name: self.name.copy())
+            return kv.copy() as! KeyValXML
+        }), UUID: self.UUID.copy() as! XMLString, iconID: self.iconID.copy() as! XMLString, times: self.times.copy() as! TimesXML, name: self.name.copy() as! XMLString)
     }
     
 }

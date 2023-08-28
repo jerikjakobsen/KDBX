@@ -119,7 +119,7 @@ public final class XMLString: NSObject, XMLValueDeserialization, Serializable, N
         return "<\(name)\(propertiesXMLize())>\(value)</\(name)>"
     }
     
-    public override func copy() -> XMLString {
+    public func copy(with zone: NSZone? = nil) -> Any {
         let propertiesCopy = self.properties
         return XMLString(value: self.value, name: self.name, properties: propertiesCopy)
     }
